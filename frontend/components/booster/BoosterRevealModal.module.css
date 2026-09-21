@@ -454,7 +454,73 @@
 .cardFlipped {
   transform: rotateY(180deg) scale(1);
 }
+/* Common / Uncommon :
+   pas de rotation, simple apparition */
+.cardBasic {
+  transform: scale(.96);
+  opacity: 0;
 
+  transition:
+    opacity 220ms ease,
+    transform 320ms cubic-bezier(.2,.8,.2,1);
+}
+.tiltFrame {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --mx: 50%;
+  --my: 50%;
+
+  position: relative;
+  z-index: 10;
+
+  width: min(34vh, 340px);
+  min-width: 225px;
+  aspect-ratio: 5 / 7;
+
+  transform:
+    rotateX(var(--tilt-x))
+    rotateY(var(--tilt-y));
+
+  transform-style: preserve-3d;
+
+  transition:
+    transform .18s ease-out;
+
+  animation:
+    cardEnter 120ms ease-out both;
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform:
+      scale(.975)
+      rotateX(var(--tilt-x))
+      rotateY(var(--tilt-y));
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      scale(1)
+      rotateX(var(--tilt-x))
+      rotateY(var(--tilt-y));
+  }
+}
+.cardBasicVisible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* On cache complètement le dos */
+.cardBasic .cardBack {
+  display: none;
+}
+
+/* La face avant n'a plus besoin d'être retournée */
+.cardBasic .cardFront {
+  transform: none;
+}
 .cardFace {
   position: absolute;
   inset: 0;

@@ -10,6 +10,10 @@ from pathlib import Path
 from ..config import get_settings
 from ..models import CardOut, Game, SetSummary
 from .image_mapper import resolve_image_url
+from .drop_profiles import (
+    POKEMON_SUPPORTED_SET_IDS,
+    RIFTBOUND_SUPPORTED_SET_IDS,
+)
 
 
 DB_FILENAMES = {
@@ -93,28 +97,50 @@ def list_sets(
             ).fetchall()
 
         elif game == "pokemon":
+            placeholders = ",".join(
+                "?"
+                for _ in POKEMON_SUPPORTED_SET_IDS
+            )
+
             rows = conn.execute(
-                """
+                f"""
                 SELECT
                     set_id AS set_code,
                     name AS set_name,
                     card_count_total AS card_count
                 FROM sets
+                WHERE set_id IN ({placeholders})
                 ORDER BY release_date DESC, set_id
-                """
+                """,
+                tuple(
+                    sorted(
+                        POKEMON_SUPPORTED_SET_IDS
+                    )
+                ),
             ).fetchall()
 
         else:
+            placeholders = ",".join(
+                "?"
+                for _ in RIFTBOUND_SUPPORTED_SET_IDS
+            )
+
             rows = conn.execute(
-                """
+                f"""
                 SELECT
                     set_code,
                     set_name,
                     card_count
                 FROM sets
                 WHERE card_count > 0
+                  AND set_code IN ({placeholders})
                 ORDER BY set_code
-                """
+                """,
+                tuple(
+                    sorted(
+                        RIFTBOUND_SUPPORTED_SET_IDS
+                    )
+                ),
             ).fetchall()
 
     return [

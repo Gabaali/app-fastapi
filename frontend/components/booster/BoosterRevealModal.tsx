@@ -107,31 +107,89 @@ export default function BoosterRevealModal({
   // - les suivantes se révèlent dès que l'utilisateur clique sur
   //   "Carte suivante", sans clic supplémentaire sur la carte.
   useEffect(() => {
-    if (!open || scene !== "cards" || !current || !profile) return;
+    if (
+      !open ||
+      scene !== "cards" ||
+      !current ||
+      !profile
+    ) {
+      return;
+    }
 
     setRevealing(false);
     setRevealed(false);
-    setSuspense(profile.suspenseMs > 0);
+    setSuspense(
+      profile.suspenseMs > 0
+    );
 
-    let finishTimer: number | undefined;
+    let revealInfoTimer:
+      number | undefined;
 
-    const startTimer = window.setTimeout(() => {
-      setSuspense(false);
-      setRevealing(true);
+    let finishTimer:
+      number | undefined;
 
-      finishTimer = window.setTimeout(() => {
-        setRevealing(false);
-        setRevealed(true);
-      }, profile.durationMs);
-    }, 120 + profile.suspenseMs);
+    const startTimer =
+      window.setTimeout(() => {
+        setSuspense(false);
+        setRevealing(true);
+
+        // Common / Uncommon :
+        // apparition simple, infos presque immédiates.
+        //
+        // Cartes avec rotation :
+        // les infos apparaissent dès que la face avant
+        // devient réellement visible.
+        const infoDelay =
+          profile.rank <= 20
+            ? 100
+            : Math.max(
+                180,
+                Math.round(
+                  profile.durationMs * 0.52
+                )
+              );
+
+        revealInfoTimer =
+          window.setTimeout(() => {
+            setRevealed(true);
+          }, infoDelay);
+
+        // Les effets continuent éventuellement après
+        // l'apparition des infos.
+        finishTimer =
+          window.setTimeout(() => {
+            setRevealing(false);
+          }, profile.durationMs);
+      }, 80 + profile.suspenseMs);
 
     return () => {
-      window.clearTimeout(startTimer);
-      if (finishTimer !== undefined) {
-        window.clearTimeout(finishTimer);
+      window.clearTimeout(
+        startTimer
+      );
+
+      if (
+        revealInfoTimer !== undefined
+      ) {
+        window.clearTimeout(
+          revealInfoTimer
+        );
+      }
+
+      if (
+        finishTimer !== undefined
+      ) {
+        window.clearTimeout(
+          finishTimer
+        );
       }
     };
-  }, [open, scene, index, current, profile]);
+  }, [
+    open,
+    scene,
+    index,
+    current,
+    profile,
+  ]);
 
   if (!open || !current || !profile) return null;
 
@@ -159,15 +217,23 @@ export default function BoosterRevealModal({
     if (!revealed) return;
 
     if (index >= sortedCards.length - 1) {
-      resetCardState();
+      clearTimers();
       setScene("summary");
       return;
     }
 
-    resetCardState();
+    clearTimers();
+    resetTilt();
+
+    // React groupe ces changements :
+    // l'ancienne carte est retirée directement,
+    // la suivante est créée face cachée.
+    setRevealing(false);
+    setRevealed(false);
+    setSuspense(false);
+
     setIndex((value) => value + 1);
   };
-
   function resetTilt() {
     const element = tiltRef.current;
     if (!element) return;
@@ -287,6 +353,7 @@ export default function BoosterRevealModal({
             ) : null}
 
             <div
+              key={cardId(current, index)}
               ref={tiltRef}
               className={`${styles.tiltFrame} ${revealed ? styles.inspectable : ""}`}
               onPointerMove={onPointerMove}
@@ -296,8 +363,20 @@ export default function BoosterRevealModal({
                 className={styles.cardButton}
                 aria-label={revealed ? current.name : "Révélation automatique de la carte"}
               >
-                <div
-                  className={`${styles.card3d} ${revealing || revealed ? styles.cardFlipped : ""}`}
+              <div
+                    className={
+                      profile.rank <= 20
+                        ? `${styles.card3d} ${styles.cardBasic} ${
+                            revealing || revealed
+                              ? styles.cardBasicVisible
+                              : ""
+                          }`
+                        : `${styles.card3d} ${
+                            revealing || revealed
+                              ? styles.cardFlipped
+                              : ""
+                          }`
+                    }
                 >
                   <div className={`${styles.cardFace} ${styles.cardBack}`}>
                     <div className={styles.backFrame}>
