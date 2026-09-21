@@ -295,10 +295,19 @@ export default function BoosterPage() {
               {balance === null
                 ? "—"
                 : balance.toLocaleString(
-                    "fr-FR",
+                    "fr-FR"
                   )}{" "}
               🪙
             </div>
+
+            <button
+              className="ghostButton"
+              onClick={() =>
+                router.push("/cartedex")
+              }
+            >
+              Cartédex
+            </button>
 
             <button
               className="ghostButton"

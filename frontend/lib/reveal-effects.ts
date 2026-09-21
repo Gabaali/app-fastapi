@@ -14,6 +14,7 @@ export type RevealCard = {
   _treatment?: string | null;
   card_number?: string | null;
   collectible?: boolean;
+  is_new?: boolean;
 };
 
 export type RevealTier = "basic" | "rare" | "premium" | "chase";

@@ -1574,6 +1574,44 @@
     blur(0)
     brightness(1);
 }
+.newCardBadge,
+.ownedCardBadge {
+  width: fit-content;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .10em;
+}
+
+.newCardBadge {
+  border: 1px solid rgba(128,255,190,.45);
+  background: rgba(72,220,142,.12);
+  color: #9dffc8;
+  box-shadow: 0 0 18px rgba(72,220,142,.13);
+}
+
+.ownedCardBadge {
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.48);
+}
+
+.newOverlayBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(57,220,137,.92);
+  color: #07150d;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .12em;
+  box-shadow: 0 0 24px rgba(57,220,137,.38);
+}
 .basicFront {
   transform: none !important;
 }

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .routers import boosters, catalog, wallet
-
+from .routers import boosters, catalog, wallet, cartedex
 
 settings = get_settings()
 
@@ -73,3 +73,4 @@ def health():
 app.include_router(catalog.router)
 app.include_router(wallet.router)
 app.include_router(boosters.router)
+app.include_router(cartedex.router)

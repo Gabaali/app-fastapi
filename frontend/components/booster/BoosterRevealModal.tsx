@@ -458,6 +458,19 @@ const cssVars = {
             {revealed && profile.label ? (
               <div className={styles.rarityBadge}>{profile.label}</div>
             ) : null}
+            {revealed ? (
+              <div
+                className={
+                  current.is_new
+                    ? styles.newCardBadge
+                    : styles.ownedCardBadge
+                }
+              >
+                {current.is_new
+                  ? "✦ NOUVELLE CARTE"
+                  : "DÉJÀ POSSÉDÉE"}
+              </div>
+            ) : null}
           </section>
 
           <section className={styles.centerStage}>
@@ -625,7 +638,7 @@ const cssVars = {
                 )}
               </div>
             </div>
-
+            
             <div className={styles.mobileMeta}>
               <strong>{revealed ? current.name : "Carte mystère"}</strong>
               {revealed ? <span>{cardDetails(current)}</span> : null}
