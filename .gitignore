@@ -6,7 +6,6 @@ node_modules/
 out/
 backend/.env
 frontend/.env.local
-backend/data/*.sqlite
 backend/data/*.db
 .DS_Store
 Thumbs.db
