@@ -281,7 +281,60 @@
   gap: clamp(16px, 3vw, 54px);
   padding: 22px clamp(20px, 4vw, 70px) 28px;
 }
+.showFrontInstant {
+  transform: rotateY(180deg);
 
+  transition: none !important;
+
+  animation:
+    teaserMaterializeCard
+    520ms
+    cubic-bezier(.16,.84,.22,1)
+    both;
+
+  will-change:
+    transform,
+    opacity,
+    filter;
+}
+
+@keyframes teaserMaterializeCard {
+  0% {
+    opacity: 0;
+
+    transform:
+      rotateY(180deg)
+      scale(.88);
+
+    filter:
+      blur(14px)
+      brightness(1.45);
+  }
+
+  45% {
+    opacity: 1;
+
+    transform:
+      rotateY(180deg)
+      scale(1.03);
+
+    filter:
+      blur(4px)
+      brightness(1.22);
+  }
+
+  100% {
+    opacity: 1;
+
+    transform:
+      rotateY(180deg)
+      scale(1);
+
+    filter:
+      blur(0)
+      brightness(1);
+  }
+}
 .metaColumn {
   align-self: center;
   max-width: 320px;
@@ -425,6 +478,7 @@
   transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
   transform-style: preserve-3d;
   transition: transform .18s ease-out;
+  animation: cardEnter 120ms ease-out both;
 }
 
 .inspectable { cursor: grab; }
@@ -454,73 +508,29 @@
 .cardFlipped {
   transform: rotateY(180deg) scale(1);
 }
-/* Common / Uncommon :
-   pas de rotation, simple apparition */
+
+/* Common / Uncommon : aucune rotation, seulement une apparition douce. */
 .cardBasic {
-  transform: scale(.96);
   opacity: 0;
-
+  transform: scale(.96);
   transition:
-    opacity 220ms ease,
-    transform 320ms cubic-bezier(.2,.8,.2,1);
-}
-.tiltFrame {
-  --tilt-x: 0deg;
-  --tilt-y: 0deg;
-  --mx: 50%;
-  --my: 50%;
-
-  position: relative;
-  z-index: 10;
-
-  width: min(34vh, 340px);
-  min-width: 225px;
-  aspect-ratio: 5 / 7;
-
-  transform:
-    rotateX(var(--tilt-x))
-    rotateY(var(--tilt-y));
-
-  transform-style: preserve-3d;
-
-  transition:
-    transform .18s ease-out;
-
-  animation:
-    cardEnter 120ms ease-out both;
+    opacity 160ms ease,
+    transform 240ms cubic-bezier(.2,.8,.2,1);
 }
 
-@keyframes cardEnter {
-  from {
-    opacity: 0;
-    transform:
-      scale(.975)
-      rotateX(var(--tilt-x))
-      rotateY(var(--tilt-y));
-  }
-
-  to {
-    opacity: 1;
-    transform:
-      scale(1)
-      rotateX(var(--tilt-x))
-      rotateY(var(--tilt-y));
-  }
-}
 .cardBasicVisible {
-  transform: scale(1);
   opacity: 1;
+  transform: scale(1);
 }
 
-/* On cache complètement le dos */
 .cardBasic .cardBack {
   display: none;
 }
 
-/* La face avant n'a plus besoin d'être retournée */
 .cardBasic .cardFront {
   transform: none;
 }
+
 .cardFace {
   position: absolute;
   inset: 0;
@@ -651,6 +661,661 @@
     inset 0 0 22px color-mix(in srgb, var(--primary) 18%, transparent),
     0 0 24px color-mix(in srgb, var(--primary) 28%, transparent);
   animation: edgePulse 1.8s ease-in-out infinite;
+}
+
+/* ============================================================
+   IMPACTS DE RARETÉ — aucun fond rectangulaire
+   ============================================================ */
+
+.impactLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.impactRing {
+  position: absolute;
+  width: 120px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--primary) 82%, white);
+  opacity: 0;
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--primary) 45%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--accent) 18%, transparent);
+  transform: scale(.28);
+}
+.sparkBurst {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 1px;
+  height: 1px;
+}
+
+.spark {
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  width: 5px;
+  height: 18px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      to top,
+      transparent,
+      var(--accent),
+      white
+    );
+
+  box-shadow:
+    0 0 8px
+      var(--primary),
+    0 0 16px
+      color-mix(
+        in srgb,
+        var(--accent) 70%,
+        transparent
+      );
+
+  opacity: 0;
+
+  transform-origin:
+    50% 100%;
+
+  animation:
+    sparkShoot
+    720ms
+    cubic-bezier(.1,.65,.2,1)
+    var(--spark-delay)
+    both;
+}
+
+@keyframes sparkShoot {
+  0% {
+    opacity: 1;
+
+    transform:
+      rotate(
+        calc(
+          360deg /
+          var(--count) *
+          var(--i)
+        )
+      )
+      translateY(-20px)
+      scaleY(.4);
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      rotate(
+        calc(
+          360deg /
+          var(--count) *
+          var(--i)
+        )
+      )
+      translateY(
+        calc(
+          var(--spark-distance)
+          * -1
+        )
+      )
+      scaleY(1.3);
+  }
+}
+.starBurst {
+  position: absolute;
+
+  width: 420px;
+  aspect-ratio: 1;
+
+  opacity: 0;
+
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+
+      transparent
+      0deg 8deg,
+
+      color-mix(
+        in srgb,
+        var(--primary) 85%,
+        white
+      )
+      8deg 10deg,
+
+      transparent
+      10deg 22deg
+    );
+
+  mask-image:
+    radial-gradient(
+      circle,
+      transparent 0 17%,
+      black 23%,
+      transparent 72%
+    );
+
+  animation:
+    starExplosion
+    850ms
+    cubic-bezier(.1,.7,.2,1)
+    both;
+}
+
+@keyframes starExplosion {
+  0% {
+    opacity: 0;
+    transform:
+      scale(.18)
+      rotate(-12deg);
+  }
+
+  12% {
+    opacity: .95;
+  }
+
+  50% {
+    opacity: .55;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      scale(1.5)
+      rotate(14deg);
+  }
+}
+.energyFlash {
+  position: absolute;
+
+  width: 85px;
+  aspect-ratio: 1;
+
+  border-radius: 50%;
+
+  opacity: 0;
+
+  background:
+    radial-gradient(
+      circle,
+      white 0%,
+      var(--accent) 28%,
+      var(--primary) 48%,
+      transparent 72%
+    );
+
+  filter: blur(2px);
+
+  animation:
+    energyFlash
+    420ms
+    ease-out
+    both;
+}
+
+@keyframes energyFlash {
+  0% {
+    opacity: 1;
+    transform: scale(.3);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(5);
+  }
+}
+.fireworkStage {
+  position: absolute;
+  inset: 0;
+
+  overflow: visible;
+}
+
+.firework {
+  position: absolute;
+
+  left:
+    calc(
+      50% +
+      var(--firework-x)
+    );
+
+  top:
+    calc(
+      50% +
+      var(--firework-y)
+    );
+
+  width: 1px;
+  height: 1px;
+
+  animation:
+    fireworkAppear
+    1ms
+    var(--firework-delay)
+    both;
+}
+
+@keyframes fireworkAppear {
+  from {
+    visibility: hidden;
+  }
+
+  to {
+    visibility: visible;
+  }
+}
+.fireworkCore {
+  position: absolute;
+
+  left: -12px;
+  top: -12px;
+
+  width: 24px;
+  height: 24px;
+
+  border-radius: 50%;
+
+  background: white;
+
+  box-shadow:
+    0 0 18px white,
+    0 0 35px
+      var(--accent),
+    0 0 60px
+      var(--primary);
+
+  opacity: 0;
+
+  animation:
+    fireworkCore
+    450ms
+    ease-out
+    var(--firework-delay)
+    both;
+}
+
+@keyframes fireworkCore {
+  0% {
+    opacity: 0;
+    transform: scale(.2);
+  }
+
+  15% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+.fireworkParticle {
+  position: absolute;
+
+  left: -2px;
+  top: -8px;
+
+  width: 4px;
+  height: 16px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      to top,
+      transparent,
+      var(--primary),
+      var(--accent),
+      white
+    );
+
+  box-shadow:
+    0 0 7px
+      var(--accent);
+
+  opacity: 0;
+
+  transform-origin:
+    50% 100%;
+
+  animation:
+    fireworkParticle
+    950ms
+    cubic-bezier(.08,.6,.2,1)
+    var(--firework-delay)
+    both;
+}
+
+@keyframes fireworkParticle {
+  0% {
+    opacity: 1;
+
+    transform:
+      rotate(
+        calc(
+          360deg /
+          var(--count) *
+          var(--i)
+        )
+      )
+      translateY(-8px)
+      scaleY(.45);
+  }
+
+  45% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      rotate(
+        calc(
+          360deg /
+          var(--count) *
+          var(--i)
+        )
+      )
+      translateY(
+        calc(
+          var(--distance)
+          * -1
+        )
+      )
+      scaleY(.15);
+  }
+}
+.glitterRain {
+  position: absolute;
+  inset: -20%;
+
+  overflow: visible;
+}
+
+.glitter {
+  position: absolute;
+
+  left: var(--gx);
+  top: 4%;
+
+  width: 4px;
+  height: 4px;
+
+  border-radius: 50%;
+
+  background: white;
+
+  box-shadow:
+    0 0 7px white,
+    0 0 14px var(--accent);
+
+  opacity: 0;
+
+  animation:
+    glitterFall
+    var(--gduration)
+    ease-in
+    var(--gdelay)
+    both;
+}
+
+@keyframes glitterFall {
+  0% {
+    opacity: 0;
+
+    transform:
+      translateY(-30px)
+      scale(.4);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  65% {
+    opacity: .9;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translateY(520px)
+      translateX(25px)
+      scale(.1);
+  }
+}
+.chaseFlash {
+  position: absolute;
+
+  width: 170px;
+  height: 480px;
+
+  opacity: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,.75),
+      transparent
+    );
+
+  filter:
+    blur(12px);
+
+  transform:
+    rotate(28deg)
+    translateX(-300px);
+
+  animation:
+    chaseFlashSweep
+    900ms
+    ease-out
+    120ms
+    both;
+}
+
+@keyframes chaseFlashSweep {
+  0% {
+    opacity: 0;
+    transform:
+      rotate(28deg)
+      translateX(-330px);
+  }
+
+  20% {
+    opacity: .85;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      rotate(28deg)
+      translateX(330px);
+  }
+}
+.impactRing1 {
+  animation: waterRipple 950ms cubic-bezier(.15,.7,.25,1) both;
+}
+
+.impactRing2 {
+  animation: waterRipple 1100ms cubic-bezier(.15,.7,.25,1) 90ms both;
+}
+
+.impactRing3 {
+  animation: waterRipple 1250ms cubic-bezier(.15,.7,.25,1) 180ms both;
+}
+
+.impactLevel2 .impactRing,
+.impactLevel3 .impactRing,
+.impactLevel4 .impactRing,
+.impactLevel5 .impactRing {
+  box-shadow:
+    0 0 26px color-mix(in srgb, var(--primary) 62%, transparent),
+    inset 0 0 20px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.energyBurst {
+  position: absolute;
+  width: 310px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--accent) 72%, white) 0 2%,
+      color-mix(in srgb, var(--primary) 38%, transparent) 8%,
+      transparent 42%
+    );
+  filter: blur(1px);
+  animation: energyBurst 850ms ease-out both;
+}
+
+.prismRing {
+  position: absolute;
+  width: 340px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent,
+      var(--primary),
+      var(--accent),
+      var(--secondary),
+      transparent,
+      var(--primary),
+      transparent
+    );
+  padding: 3px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 16px var(--primary));
+  animation: prismRing 1300ms ease-out both;
+}
+
+.radialRays {
+  position: absolute;
+  width: 520px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      color-mix(in srgb, var(--primary) 40%, transparent) 0deg 2deg,
+      transparent 2deg 13deg
+    );
+  -webkit-mask-image:
+    radial-gradient(circle, transparent 0 22%, black 42%, transparent 72%);
+  mask-image:
+    radial-gradient(circle, transparent 0 22%, black 42%, transparent 72%);
+  animation: radialBurst 1150ms ease-out both;
+}
+
+.impactFlash {
+  position: absolute;
+  width: 360px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle,
+      rgba(255,255,255,.86) 0 3%,
+      color-mix(in srgb, var(--accent) 52%, transparent) 12%,
+      transparent 55%
+    );
+  animation: impactFlash 620ms ease-out both;
+}
+
+.novaHalo {
+  position: absolute;
+  width: 430px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle,
+      rgba(255,255,255,.96) 0 2%,
+      var(--accent) 4%,
+      color-mix(in srgb, var(--primary) 72%, transparent) 12%,
+      color-mix(in srgb, var(--secondary) 35%, transparent) 30%,
+      transparent 68%
+    );
+  animation: novaHalo 1250ms ease-out both;
+}
+
+.novaCore {
+  position: absolute;
+  width: 75px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle,
+      white 0%,
+      var(--accent) 20%,
+      var(--primary) 50%,
+      transparent 72%
+    );
+  filter: blur(2px);
+  animation: novaCore 650ms ease-out both;
+}
+
+.novaRays {
+  position: absolute;
+  width: 680px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255,255,255,.8) 0deg 1deg,
+      transparent 1deg 8deg,
+      color-mix(in srgb, var(--primary) 75%, transparent) 8deg 10deg,
+      transparent 10deg 20deg
+    );
+  -webkit-mask-image:
+    radial-gradient(circle, transparent 0 17%, black 35%, transparent 78%);
+  mask-image:
+    radial-gradient(circle, transparent 0 17%, black 35%, transparent 78%);
+  animation: novaRays 1450ms cubic-bezier(.15,.65,.2,1) both;
 }
 
 .particleLayer {
@@ -794,7 +1459,436 @@
   border-radius: 11px;
   background: #0a0c12;
 }
+.sparkBuildArtwork {
+  position: absolute;
+  inset: 0;
 
+  z-index: 1;
+
+  overflow: hidden;
+
+  border-radius: 18px;
+
+  opacity: 0;
+
+  transform: scale(.965);
+
+  filter:
+    blur(18px)
+    brightness(1.8)
+    saturate(.65);
+
+  animation:
+    buildArtworkReveal
+    var(--build-duration)
+    cubic-bezier(.16,.72,.18,1)
+    both;
+}
+
+@keyframes buildArtworkReveal {
+  0% {
+    opacity: 0;
+
+    transform:
+      scale(.94);
+
+    filter:
+      blur(24px)
+      brightness(2)
+      saturate(.4);
+  }
+
+  45% {
+    opacity: 0;
+
+    transform:
+      scale(.96);
+
+    filter:
+      blur(18px)
+      brightness(1.8)
+      saturate(.55);
+  }
+
+  65% {
+    opacity: .22;
+
+    filter:
+      blur(10px)
+      brightness(1.55)
+      saturate(.8);
+  }
+
+  82% {
+    opacity: .68;
+
+    transform:
+      scale(.99);
+
+    filter:
+      blur(4px)
+      brightness(1.25)
+      saturate(1);
+  }
+
+  100% {
+    opacity: 1;
+
+    transform:
+      scale(1);
+
+    filter:
+      blur(0)
+      brightness(1)
+      saturate(1);
+  }
+}
+.directRevealCard {
+  position: absolute;
+  inset: 0;
+
+  overflow: hidden;
+
+  border-radius: 18px;
+
+  opacity: 0;
+
+  transform: scale(.97);
+
+  filter:
+    blur(6px)
+    brightness(1.3);
+
+  transition:
+    opacity 220ms ease,
+    transform 220ms cubic-bezier(.16,.8,.2,1),
+    filter 220ms ease;
+}
+
+.directRevealCardVisible {
+  opacity: 1;
+
+  transform: scale(1);
+
+  filter:
+    blur(0)
+    brightness(1);
+}
+.basicFront {
+  transform: none !important;
+}
+.cardHiddenDuringBuild {
+  opacity: 0 !important;
+
+  pointer-events: none;
+
+  transition: none !important;
+}
+
+
+/* =========================================================
+   CONSTRUCTION DE LA CARTE EN ÉTINCELLES
+   ========================================================= */
+
+.sparkBuild {
+  position: absolute;
+
+  z-index: 12;
+
+  width: min(34vh, 340px);
+  min-width: 225px;
+
+  aspect-ratio: 5 / 7;
+
+  pointer-events: none;
+
+  overflow: visible;
+}
+
+
+/* Silhouette colorée de la future carte */
+
+.sparkBuildGhost {
+  position: absolute;
+
+  inset: 0;
+
+  border-radius: 18px;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 75%,
+      white
+    );
+
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(
+        in srgb,
+        var(--primary) 12%,
+        transparent
+      ),
+      transparent 65%
+    );
+
+  box-shadow:
+    0 0 20px
+      color-mix(
+        in srgb,
+        var(--primary) 40%,
+        transparent
+      ),
+    0 0 55px
+      color-mix(
+        in srgb,
+        var(--secondary) 20%,
+        transparent
+      ),
+    inset 0 0 25px
+      color-mix(
+        in srgb,
+        var(--accent) 12%,
+        transparent
+      );
+
+  opacity: 0;
+
+  transform:
+    scale(.92);
+
+  animation:
+    buildGhost
+    var(--build-duration)
+    cubic-bezier(.18,.72,.2,1)
+    both;
+}
+
+
+@keyframes buildGhost {
+  0% {
+    opacity: 0;
+
+    transform:
+      scale(.86);
+
+    filter:
+      blur(12px);
+  }
+
+  30% {
+    opacity: .18;
+  }
+
+  62% {
+    opacity: .5;
+
+    transform:
+      scale(.97);
+
+    filter:
+      blur(3px);
+  }
+
+  86% {
+    opacity: .9;
+
+    transform:
+      scale(1);
+
+    filter:
+      blur(0);
+  }
+
+  100% {
+    opacity: .18;
+
+    transform:
+      scale(1.01);
+  }
+}
+
+
+/* Lumière qui se forme au centre */
+
+.sparkBuildCore {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 45%;
+  aspect-ratio: 1;
+
+  border-radius: 50%;
+
+  transform:
+    translate(-50%, -50%);
+
+  background:
+    radial-gradient(
+      circle,
+      color-mix(
+        in srgb,
+        var(--accent) 55%,
+        white
+      ),
+      color-mix(
+        in srgb,
+        var(--primary) 22%,
+        transparent
+      )
+      35%,
+      transparent 72%
+    );
+
+  filter: blur(14px);
+
+  opacity: 0;
+
+  animation:
+    buildCore
+    var(--build-duration)
+    ease-in-out
+    both;
+}
+
+
+@keyframes buildCore {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      scale(.2);
+  }
+
+  45% {
+    opacity: .5;
+  }
+
+  82% {
+    opacity: .9;
+
+    transform:
+      translate(-50%, -50%)
+      scale(1.15);
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+
+/* Étincelles qui viennent de l'extérieur
+   et rejoignent la silhouette */
+
+.sparkBuildParticle {
+  position: absolute;
+
+  left: var(--tx);
+  top: var(--ty);
+
+  width:
+    var(--spark-size);
+
+  height:
+    var(--spark-size);
+
+  border-radius: 50%;
+
+  background:
+    var(--spark-color);
+
+  box-shadow:
+    0 0 6px
+      var(--spark-color),
+    0 0 13px
+      var(--spark-color);
+
+  opacity: 0;
+
+  transform:
+    translate(
+      var(--sx),
+      var(--sy)
+    )
+    scale(.25);
+
+  animation:
+    sparkAssemble
+    var(--spark-duration)
+    cubic-bezier(.12,.65,.16,1)
+    var(--spark-delay)
+    both;
+}
+
+
+@keyframes sparkAssemble {
+  0% {
+    opacity: 0;
+
+    transform:
+      translate(
+        var(--sx),
+        var(--sy)
+      )
+      scale(.2);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  65% {
+    opacity: 1;
+  }
+
+  88% {
+    opacity: 1;
+
+    transform:
+      translate(
+        0,
+        0
+      )
+      scale(1.4);
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translate(
+        0,
+        0
+      )
+      scale(.35);
+  }
+}
+
+
+/* Quelques particules plus brillantes */
+
+.sparkBuildStar {
+  border-radius: 2px;
+
+  transform:
+    translate(
+      var(--sx),
+      var(--sy)
+    )
+    rotate(45deg);
+
+  box-shadow:
+    0 0 7px white,
+    0 0 15px
+      var(--spark-color),
+    0 0 25px
+      var(--spark-color);
+}
 .summaryImageWrap img {
   display: block;
   width: 100%;
@@ -857,6 +1951,81 @@
   pointer-events: none;
   background: conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--primary) 7%, transparent), transparent, color-mix(in srgb, var(--secondary) 8%, transparent), transparent);
   animation: slowRotate 12s linear infinite;
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: scale(.975) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  }
+}
+
+@keyframes waterRipple {
+  0% {
+    opacity: .95;
+    transform: scale(.22);
+  }
+
+  25% {
+    opacity: .8;
+  }
+
+  60% {
+    opacity: .35;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(5.3);
+  }
+}
+
+@keyframes energyBurst {
+  0% { opacity: 0; transform: scale(.25); }
+  15% { opacity: .95; }
+  50% { opacity: .48; }
+  100% { opacity: 0; transform: scale(1.85); }
+}
+
+@keyframes prismRing {
+  0% { opacity: 0; transform: scale(.35) rotate(0deg); }
+  18% { opacity: .95; }
+  100% { opacity: 0; transform: scale(2.3) rotate(150deg); }
+}
+
+@keyframes radialBurst {
+  0% { opacity: 0; transform: scale(.35) rotate(-10deg); }
+  25% { opacity: .55; }
+  100% { opacity: 0; transform: scale(1.5) rotate(20deg); }
+}
+
+@keyframes impactFlash {
+  0% { opacity: 0; transform: scale(.2); }
+  18% { opacity: .8; }
+  100% { opacity: 0; transform: scale(1.85); }
+}
+
+@keyframes novaHalo {
+  0% { opacity: 0; transform: scale(.15); }
+  12% { opacity: 1; }
+  45% { opacity: .72; }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+
+@keyframes novaCore {
+  0% { opacity: 0; transform: scale(.3); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: scale(4); }
+}
+
+@keyframes novaRays {
+  0% { opacity: 0; transform: scale(.2) rotate(-20deg); }
+  20% { opacity: .8; }
+  100% { opacity: 0; transform: scale(1.45) rotate(22deg); }
 }
 
 @keyframes breathe {
@@ -961,7 +2130,7 @@
   .centerStage {
     min-height: 0;
   }
-
+  
   .tiltFrame {
     width: min(62vw, 300px, 47vh);
     min-width: 0;
