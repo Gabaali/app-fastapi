@@ -24,6 +24,7 @@ class CardOut(BaseModel):
     image_url: str | None = None
     collectible: bool = True
     slot: str | None = None
+    is_new: bool = False
 
 
 class BoosterOpenRequest(BaseModel):

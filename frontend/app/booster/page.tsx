@@ -41,6 +41,7 @@ type Card = {
   image_url: string | null;
   collectible: boolean;
   slot: string | null;
+  is_new?: boolean;
 };
 
 type Wallet = {
@@ -237,6 +238,8 @@ export default function BoosterPage() {
               card.card_number,
             collectible:
               card.collectible,
+            is_new: 
+              card.is_new ?? false,
 
             // Ton backend renvoie "slot".
             // Le moteur visuel accepte "_slot".
