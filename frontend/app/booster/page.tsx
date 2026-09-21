@@ -8,10 +8,14 @@ import {
 
 import { useRouter } from "next/navigation";
 
+import BoosterRevealModal from "@/components/booster/BoosterRevealModal";
 import { apiFetch } from "@/lib/api";
 import {
   createClient,
 } from "@/lib/supabase/client";
+import type {
+  RevealCard,
+} from "@/lib/reveal-effects";
 
 
 type Game =
@@ -77,8 +81,22 @@ export default function BoosterPage() {
   const [balance, setBalance] =
     useState<number | null>(null);
 
-  const [cards, setCards] =
-    useState<Card[]>([]);
+  // Les cartes du dernier booster servent maintenant uniquement
+  // à la révélation animée, plus à une grille immédiate.
+  const [
+    revealCards,
+    setRevealCards,
+  ] = useState<RevealCard[]>([]);
+
+  const [
+    revealOpen,
+    setRevealOpen,
+  ] = useState(false);
+
+  const [
+    revealSetCode,
+    setRevealSetCode,
+  ] = useState("");
 
   const [
     loadingSets,
@@ -137,7 +155,11 @@ export default function BoosterPage() {
     async function loadSets() {
       setLoadingSets(true);
       setError("");
-      setCards([]);
+
+      // Si le joueur change de jeu, on ferme une éventuelle
+      // révélation précédente et on vide ses cartes.
+      setRevealOpen(false);
+      setRevealCards([]);
 
       try {
         const response =
@@ -167,15 +189,17 @@ export default function BoosterPage() {
   }, [game]);
 
   async function openBooster() {
-    if (!setCode || opening) {
+    if (
+      !setCode
+      || opening
+      || revealOpen
+    ) {
       return;
     }
 
     setOpening(true);
     setError("");
-
-    // Réaction immédiate de l'interface.
-    setCards([]);
+    setRevealCards([]);
 
     try {
       const result =
@@ -191,7 +215,54 @@ export default function BoosterPage() {
         );
 
       setBalance(result.balance);
-      setCards(result.cards);
+
+      const returnedCards: RevealCard[] =
+        (result.cards ?? []).map(
+          (card) => ({
+            card_key:
+              card.card_key,
+            game:
+              card.game ?? game,
+            name:
+              card.name,
+            image_url:
+              card.image_url,
+            rarity:
+              card.rarity,
+            variant:
+              card.variant,
+            drop_class:
+              card.drop_class,
+            card_number:
+              card.card_number,
+            collectible:
+              card.collectible,
+
+            // Ton backend renvoie "slot".
+            // Le moteur visuel accepte "_slot".
+            _slot:
+              card.slot,
+          }),
+        );
+
+      if (
+        returnedCards.length === 0
+      ) {
+        throw new Error(
+          "Le backend n'a renvoyé aucune carte.",
+        );
+      }
+
+      // IMPORTANT :
+      // on N'AFFICHE PLUS les cartes ici en grille.
+      // On ouvre uniquement la cinématique.
+      setRevealCards(
+        returnedCards,
+      );
+      setRevealSetCode(
+        setCode,
+      );
+      setRevealOpen(true);
     } catch (err) {
       setError(
         err instanceof Error
@@ -209,217 +280,178 @@ export default function BoosterPage() {
   }
 
   return (
-    <main className="appShell">
-      <header className="topbar">
-        <div>
-          <div className="eyebrow">
-            TCG GAME
+    <>
+      <main className="appShell">
+        <header className="topbar">
+          <div>
+            <div className="eyebrow">
+              TCG GAME
+            </div>
+            <strong>Booster Lab</strong>
           </div>
-          <strong>Booster Lab</strong>
-        </div>
 
-        <div className="topbarRight">
-          <div className="wallet">
-            {balance === null
-              ? "—"
-              : balance.toLocaleString(
-                  "fr-FR",
-                )}{" "}
-            🪙
+          <div className="topbarRight">
+            <div className="wallet">
+              {balance === null
+                ? "—"
+                : balance.toLocaleString(
+                    "fr-FR",
+                  )}{" "}
+              🪙
+            </div>
+
+            <button
+              className="ghostButton"
+              onClick={logout}
+            >
+              Déconnexion
+            </button>
           </div>
+        </header>
+
+        <section className="hero">
+          <div>
+            <div className="eyebrow">
+              OUVERTURE
+            </div>
+
+            <h1>
+              Ouvre un booster sans
+              recharger la page.
+            </h1>
+
+            <p>
+              React garde l'interface
+              en mémoire. FastAPI n'est
+              appelé que lorsque les
+              données doivent changer.
+            </p>
+          </div>
+        </section>
+
+        <section className="controls panel">
+          <label>
+            Jeu
+            <select
+              value={game}
+              onChange={(event) =>
+                setGame(
+                  event.target
+                    .value as Game,
+                )
+              }
+            >
+              {Object.entries(
+                GAME_LABELS,
+              ).map(
+                ([value, label]) => (
+                  <option
+                    key={value}
+                    value={value}
+                  >
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label>
+            Extension
+            <select
+              value={setCode}
+              disabled={
+                loadingSets
+                || sets.length === 0
+              }
+              onChange={(event) =>
+                setSetCode(
+                  event.target.value,
+                )
+              }
+            >
+              {sets.map((set) => (
+                <option
+                  key={set.set_code}
+                  value={set.set_code}
+                >
+                  {set.set_code}
+                  {" — "}
+                  {set.set_name}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <button
-            className="ghostButton"
-            onClick={logout}
-          >
-            Déconnexion
-          </button>
-        </div>
-      </header>
-
-      <section className="hero">
-        <div>
-          <div className="eyebrow">
-            OUVERTURE
-          </div>
-
-          <h1>
-            Ouvre un booster sans
-            recharger la page.
-          </h1>
-
-          <p>
-            React garde l'interface
-            en mémoire. FastAPI n'est
-            appelé que lorsque les
-            données doivent changer.
-          </p>
-        </div>
-      </section>
-
-      <section className="controls panel">
-        <label>
-          Jeu
-          <select
-            value={game}
-            onChange={(event) =>
-              setGame(
-                event.target
-                  .value as Game,
-              )
-            }
-          >
-            {Object.entries(
-              GAME_LABELS,
-            ).map(
-              ([value, label]) => (
-                <option
-                  key={value}
-                  value={value}
-                >
-                  {label}
-                </option>
-              ),
-            )}
-          </select>
-        </label>
-
-        <label>
-          Extension
-          <select
-            value={setCode}
+            className=
+              "primaryButton openButton"
             disabled={
-              loadingSets
-              || sets.length === 0
+              !setCode
+              || opening
+              || revealOpen
             }
-            onChange={(event) =>
-              setSetCode(
-                event.target.value,
-              )
-            }
+            onClick={openBooster}
           >
-            {sets.map((set) => (
-              <option
-                key={set.set_code}
-                value={set.set_code}
-              >
-                {set.set_code}
-                {" — "}
-                {set.set_name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <button
-          className=
-            "primaryButton openButton"
-          disabled={
-            !setCode || opening
-          }
-          onClick={openBooster}
-        >
-          {opening
-            ? "Ouverture..."
-            : "Ouvrir le booster"}
-        </button>
-      </section>
-
-      {selectedSet && (
-        <p className="setMeta">
-          {GAME_LABELS[game]}
-          {" · "}
-          {selectedSet.set_name}
-          {selectedSet.card_count
-            ? ` · ${selectedSet.card_count} cartes`
-            : ""}
-        </p>
-      )}
-
-      {error && (
-        <div className="errorBox">
-          {error}
-        </div>
-      )}
-
-      {opening && (
-        <section className=
-          "openingStage"
-        >
-          <div className="pack">
-            <span>
-              {GAME_LABELS[game]}
-            </span>
-            <strong>{setCode}</strong>
-            <small>BOOSTER</small>
-          </div>
-
-          <p>Ouverture...</p>
+            {opening
+              ? "Ouverture..."
+              : "Ouvrir le booster"}
+          </button>
         </section>
-      )}
 
-      {!opening
-        && cards.length > 0
-        && (
+        {selectedSet && (
+          <p className="setMeta">
+            {GAME_LABELS[game]}
+            {" · "}
+            {selectedSet.set_name}
+            {selectedSet.card_count
+              ? ` · ${selectedSet.card_count} cartes`
+              : ""}
+          </p>
+        )}
+
+        {error && (
+          <div className="errorBox">
+            {error}
+          </div>
+        )}
+
+        {opening && (
           <section className=
-            "cardsGrid"
+            "openingStage"
           >
-            {cards.map(
-              (card, index) => (
-                <article
-                  className="cardTile"
-                  key={
-                    `${card.card_key}-${index}`
-                  }
-                  style={{
-                    animationDelay:
-                      `${index * 45}ms`,
-                  }}
-                >
-                  <div className=
-                    "cardImage"
-                  >
-                    {card.image_url ? (
-                      <img
-                        src={
-                          card.image_url
-                        }
-                        alt={card.name}
-                      />
-                    ) : (
-                      <div className=
-                        "cardPlaceholder"
-                      >
-                        {
-                          card.product_set
-                        }
-                      </div>
-                    )}
-                  </div>
+            <div className="pack">
+              <span>
+                {GAME_LABELS[game]}
+              </span>
+              <strong>{setCode}</strong>
+              <small>BOOSTER</small>
+            </div>
 
-                  <div className=
-                    "cardBody"
-                  >
-                    <small>
-                      {card.slot}
-                    </small>
-
-                    <strong>
-                      {card.name}
-                    </strong>
-
-                    <span>
-                      {card.card_number}
-                      {card.rarity
-                        ? ` · ${card.rarity}`
-                        : ""}
-                    </span>
-                  </div>
-                </article>
-              ),
-            )}
+            <p>Ouverture...</p>
           </section>
         )}
-    </main>
+
+        {/*
+          IMPORTANT :
+          l'ancienne grille cards.map(...) a volontairement été supprimée.
+
+          BoosterRevealModal gère maintenant :
+          - l'ouverture du paquet ;
+          - la révélation automatique de chaque carte ;
+          - "Carte suivante" ;
+          - le récapitulatif final.
+        */}
+      </main>
+
+      <BoosterRevealModal
+        open={revealOpen}
+        cards={revealCards}
+        setCode={revealSetCode}
+        onClose={() => {
+          setRevealOpen(false);
+        }}
+      />
+    </>
   );
 }
