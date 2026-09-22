@@ -4,8 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .routers import boosters, catalog, wallet
-from .routers import boosters, catalog, wallet, cartedex
+from .routers import boosters, cartedex, catalog, quiz, wallet
 
 settings = get_settings()
 
@@ -74,3 +73,4 @@ app.include_router(catalog.router)
 app.include_router(wallet.router)
 app.include_router(boosters.router)
 app.include_router(cartedex.router)
+app.include_router(quiz.router)

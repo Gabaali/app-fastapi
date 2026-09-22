@@ -500,6 +500,19 @@ export default function BoosterPage() {
             <button
               type="button"
               className="ghostButton"
+              onClick={() =>
+                router.push(
+                  "/quiz"
+                )
+              }
+            >
+              Quiz Lore
+            </button>
+
+
+            <button
+              type="button"
+              className="ghostButton"
               onClick={
                 logout
               }

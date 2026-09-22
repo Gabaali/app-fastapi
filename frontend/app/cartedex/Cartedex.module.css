@@ -34,6 +34,12 @@
   letter-spacing: .16em;
 }
 
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .boosterButton {
   min-height: 42px;
 
@@ -420,6 +426,17 @@
 }
 
 @media (max-width: 760px) {
+  .topbar {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 0;
+  }
+
+  .navActions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .controls {
     grid-template-columns: 1fr;
   }

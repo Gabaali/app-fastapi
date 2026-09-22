@@ -41,3 +41,47 @@ class BoosterOpenResponse(BaseModel):
 
 class WalletOut(BaseModel):
     balance_coins: int
+
+
+class QuizQuestionOut(BaseModel):
+    id: str
+    type: Literal["qcm", "direct"]
+    question: str
+    choices: list[str] | None = None
+    difficulty: Literal["easy", "medium", "hard"]
+    reward_coins: int
+    category: Literal["champions", "monde"]
+    pool_exhausted: bool = False
+
+
+class QuizAnswerRequest(BaseModel):
+    question_id: str = Field(min_length=1, max_length=64)
+    answer: str = Field(min_length=1, max_length=500)
+
+
+class QuizAnswerResponse(BaseModel):
+    correct: bool
+    correct_answer: str
+    reward_coins: int
+    balance: int
+    reward_status: Literal[
+        "awarded",
+        "already_rewarded",
+        "already_attempted",
+        "daily_limit",
+        "wrong",
+        "none",
+    ]
+    daily_rewarded: int
+    daily_limit: int
+    source_label: str | None = None
+    source_url: str | None = None
+
+
+class QuizStatsOut(BaseModel):
+    balance: int
+    daily_rewarded: int
+    daily_limit: int
+    daily_coins: int
+    daily_attempts: int
+    daily_correct: int

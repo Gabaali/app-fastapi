@@ -238,17 +238,31 @@ export default function CartedexPage() {
           </strong>
         </div>
 
-        <button
-          type="button"
-          className={
-            styles.boosterButton
-          }
-          onClick={() =>
-            router.push("/booster")
-          }
-        >
-          Ouvrir un booster
-        </button>
+        <div className={styles.navActions}>
+          <button
+            type="button"
+            className={
+              styles.boosterButton
+            }
+            onClick={() =>
+              router.push("/quiz")
+            }
+          >
+            Quiz Lore
+          </button>
+
+          <button
+            type="button"
+            className={
+              styles.boosterButton
+            }
+            onClick={() =>
+              router.push("/booster")
+            }
+          >
+            Ouvrir un booster
+          </button>
+        </div>
       </header>
 
       <section
