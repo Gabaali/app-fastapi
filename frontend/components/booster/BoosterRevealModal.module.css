@@ -1110,6 +1110,462 @@
       scale(.1);
   }
 }
+.realPackButton {
+  position: relative;
+
+  width:
+    min(255px, 64vw);
+
+  aspect-ratio:
+    .58;
+
+  padding: 0;
+  margin: 0;
+
+  border: 0;
+
+  background:
+    transparent;
+
+  cursor: pointer;
+
+  perspective:
+    1000px;
+
+  isolation:
+    isolate;
+
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+.realPackButton:disabled {
+  cursor: default;
+}
+
+.realPack {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 4;
+
+  transform:
+    translateZ(0);
+
+  filter:
+    drop-shadow(
+      0 22px 32px
+      rgba(0,0,0,.48)
+    );
+}
+
+.packSliceTop,
+.packSliceBottom {
+  position: absolute;
+
+  left: 0;
+
+  width: 100%;
+  height: 50%;
+
+  overflow: hidden;
+
+  will-change:
+    transform,
+    opacity;
+
+  backface-visibility:
+    hidden;
+}
+
+.packSliceTop {
+  top: 0;
+
+  transform-origin:
+    18% 100%;
+}
+
+.packSliceBottom {
+  bottom: 0;
+
+  transform-origin:
+    center top;
+}
+
+.packSliceTop img,
+.packSliceBottom img {
+  position: absolute;
+
+  left: 0;
+
+  width: 100%;
+  height: 200%;
+
+  object-fit: fill;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+.packSliceTop img {
+  top: 0;
+}
+
+.packSliceBottom img {
+  bottom: 0;
+}
+
+.packTearStrip {
+  position: absolute;
+
+  z-index: 8;
+
+  left: -2%;
+  top: 43%;
+
+  width: 104%;
+  height: 7%;
+
+  border-radius:
+    4px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.38),
+      rgba(255,255,255,.04),
+      rgba(0,0,0,.20)
+    );
+
+  opacity: .38;
+
+  transform-origin:
+    left center;
+
+  will-change:
+    transform,
+    opacity;
+}
+
+.packShine {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 7;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      112deg,
+      transparent 25%,
+      rgba(255,255,255,.17) 42%,
+      rgba(255,255,255,.04) 50%,
+      transparent 65%
+    );
+
+  transform:
+    translateX(-100%);
+
+  opacity: .7;
+}
+
+.packCardStack {
+  position: absolute;
+
+  z-index: 2;
+
+  left: 50%;
+  top: 37%;
+
+  width: 72%;
+  height: 55%;
+
+  transform:
+    translateX(-50%)
+    translateY(34%);
+
+  opacity: 0;
+
+  will-change:
+    transform,
+    opacity;
+}
+
+.packCardPeek {
+  position: absolute;
+
+  inset: 0;
+
+  border-radius:
+    9px;
+
+  overflow: hidden;
+
+  background:
+    #151a26;
+
+  box-shadow:
+    0 4px 12px
+    rgba(0,0,0,.32);
+
+  transform:
+    translateX(
+      calc(
+        (
+          var(--card-i)
+          - 1.5
+        ) * 2px
+      )
+    )
+    rotate(
+      calc(
+        (
+          var(--card-i)
+          - 1.5
+        ) * 1deg
+      )
+    );
+}
+
+.packCardPeek img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+
+/* PHASE 1 :
+   reflet qui traverse le sachet */
+.realPackOpening
+.packShine {
+  animation:
+    packShinePass
+    320ms
+    ease-out
+    forwards;
+}
+
+
+/* PHASE 2 :
+   languette qui se déchire */
+.realPackOpening
+.packTearStrip {
+  animation:
+    packTear
+    430ms
+    180ms
+    cubic-bezier(
+      .2,
+      .7,
+      .25,
+      1
+    )
+    forwards;
+}
+
+
+/* PHASE 3 :
+   haut du booster arraché */
+.realPackOpening
+.packSliceTop {
+  animation:
+    packTopRip
+    720ms
+    390ms
+    cubic-bezier(
+      .18,
+      .8,
+      .18,
+      1
+    )
+    forwards;
+}
+
+
+/* corps du sachet */
+.realPackOpening
+.packSliceBottom {
+  animation:
+    packBodyDrop
+    700ms
+    500ms
+    cubic-bezier(
+      .2,
+      .8,
+      .2,
+      1
+    )
+    forwards;
+}
+
+
+/* cartes qui sortent */
+.realPackOpening
+.packCardStack {
+  animation:
+    packCardsRise
+    720ms
+    550ms
+    cubic-bezier(
+      .16,
+      .85,
+      .2,
+      1
+    )
+    forwards;
+}
+
+
+@keyframes packShinePass {
+  from {
+    transform:
+      translateX(-110%);
+  }
+
+  to {
+    transform:
+      translateX(115%);
+  }
+}
+
+
+@keyframes packTear {
+  0% {
+    transform:
+      translateX(0)
+      scaleX(1);
+
+    opacity: .4;
+  }
+
+  45% {
+    transform:
+      translateX(8%)
+      scaleX(.92);
+
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translateX(110%)
+      rotate(9deg)
+      scaleX(.5);
+
+    opacity: 0;
+  }
+}
+
+
+@keyframes packTopRip {
+  0% {
+    transform:
+      translate3d(
+        0,
+        0,
+        0
+      )
+      rotate(0);
+  }
+
+  30% {
+    transform:
+      translate3d(
+        4px,
+        -6px,
+        0
+      )
+      rotate(2deg);
+  }
+
+  100% {
+    transform:
+      translate3d(
+        70px,
+        -105px,
+        0
+      )
+      rotate(28deg);
+
+    opacity: 0;
+  }
+}
+
+
+@keyframes packBodyDrop {
+  0% {
+    transform:
+      translate3d(
+        0,
+        0,
+        0
+      );
+  }
+
+  100% {
+    transform:
+      translate3d(
+        0,
+        46px,
+        0
+      )
+      rotate(-1.5deg);
+
+    opacity: .25;
+  }
+}
+
+
+@keyframes packCardsRise {
+  0% {
+    transform:
+      translateX(-50%)
+      translateY(34%)
+      scale(.94);
+
+    opacity: 0;
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translateX(-50%)
+      translateY(-47%)
+      scale(1.03);
+
+    opacity: 1;
+  }
+}
+
+
+@media (
+  max-width: 760px
+) {
+  .realPackButton {
+    width:
+      min(220px, 58vw);
+  }
+
+  .packSliceTop,
+  .packSliceBottom,
+  .packCardStack,
+  .packTearStrip {
+    backface-visibility:
+      hidden;
+
+    transform-style:
+      preserve-3d;
+  }
+}
 .chaseFlash {
   position: absolute;
 
@@ -1454,6 +1910,389 @@
 
   white-space: nowrap;
 }
+.boosterPackPreview {
+  position: relative;
+
+  /*
+    Taille du booster.
+    Change 165px si tu le veux
+    encore plus petit/grand.
+  */
+  width: 165px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  isolation: isolate;
+
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
+
+  -webkit-tap-highlight-color:
+    transparent;
+}
+.boosterPackPreview:hover:not(:disabled) {
+  transform:
+    translateY(-5px)
+    scale(1.035);
+}
+
+
+.boosterPackPreview:active:not(:disabled) {
+  transform:
+    translateY(0)
+    scale(.97);
+}
+
+
+.boosterPackPreview:disabled {
+  cursor: default;
+}
+.setProgressPanel {
+  width:
+    min(620px, 100%);
+
+  margin:
+    18px auto;
+
+  padding:
+    18px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.10);
+
+  border-radius:
+    18px;
+
+  background:
+    rgba(10,14,24,.64);
+
+  backdrop-filter:
+    blur(16px);
+}
+
+.setProgressHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 16px;
+}
+
+.setProgressHeader > div {
+  display: grid;
+  gap: 4px;
+}
+
+.setProgressHeader span {
+  color:
+    rgba(255,255,255,.46);
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: .12em;
+}
+
+.setProgressHeader strong {
+  color: white;
+
+  font-size: 18px;
+}
+
+.setProgressPercent {
+  font-size: 26px !important;
+}
+
+.setProgressTrack {
+  width: 100%;
+  height: 8px;
+
+  margin:
+    13px 0 17px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255,255,255,.07);
+}
+
+.setProgressFill {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #66d6ff,
+      #9977ff
+    );
+
+  transition:
+    width 450ms ease;
+}
+
+.rarityProgressGrid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(115px, 1fr)
+    );
+
+  gap: 8px;
+}
+
+.rarityProgressItem {
+  padding: 10px;
+
+  border-radius: 12px;
+
+  background:
+    rgba(255,255,255,.035);
+
+  border:
+    1px solid
+    rgba(255,255,255,.06);
+}
+
+.rarityProgressItem > div:first-child {
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  gap: 8px;
+
+  margin-bottom: 7px;
+}
+
+.rarityProgressItem strong {
+  overflow: hidden;
+
+  font-size: 11px;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rarityProgressItem span {
+  color:
+    rgba(255,255,255,.55);
+
+  font-size: 10px;
+}
+
+.rarityMiniTrack {
+  height: 4px;
+
+  overflow: hidden;
+
+  border-radius: 99px;
+
+  background:
+    rgba(255,255,255,.08);
+}
+
+.rarityMiniFill {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    rgba(125,205,255,.9);
+}
+
+.boosterControls {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+
+  width: 100%;
+}
+.boosterSelectors {
+  display: grid;
+
+  grid-template-columns:
+    minmax(180px, 240px)
+    minmax(280px, 1fr);
+
+  gap: 18px;
+
+  width: 100%;
+
+  align-items: end;
+}
+.boosterSelectors label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.boosterSelectors select {
+  width: 100%;
+}
+.boosterPreviewArea {
+  width: 100%;
+
+  display: flex;
+
+  justify-content: center;
+  align-items: flex-start;
+
+  padding:
+    6px 0
+    14px;
+}
+
+
+
+.boosterPackImage {
+  position: relative;
+
+  z-index: 2;
+
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  max-height: 290px;
+
+  object-fit: contain;
+
+  pointer-events: none;
+  user-select: none;
+
+  filter:
+    drop-shadow(
+      0 16px 22px
+      rgba(0, 0, 0, .46)
+    );
+}
+
+
+/* Halo derrière */
+
+.boosterPackGlow {
+  position: absolute;
+
+  z-index: 0;
+
+  left: 50%;
+  top: 45%;
+
+  width: 130%;
+  height: 75%;
+
+  transform:
+    translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(100, 145, 255, .24),
+      transparent 68%
+    );
+
+  filter:
+    blur(30px);
+
+  pointer-events: none;
+}
+
+
+/* Texte sous le booster */
+
+.boosterPackHint {
+  position: relative;
+
+  z-index: 3;
+
+  margin-top: 10px;
+
+  padding:
+    6px 10px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, .12);
+
+  border-radius: 999px;
+
+  background:
+    rgba(5, 8, 16, .76);
+
+  color:
+    rgba(255, 255, 255, .72);
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: .08em;
+
+  white-space: nowrap;
+}
+
+
+/* Fallback si aucune image */
+
+.boosterPackFallback {
+  width: 165px;
+  height: 270px;
+
+  display: grid;
+
+  place-items: center;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, .10);
+
+  border-radius: 14px;
+
+  background:
+    rgba(255, 255, 255, .035);
+}
+@media (max-width: 700px) {
+  .boosterSelectors {
+    grid-template-columns: 1fr;
+  }
+
+  .boosterPackPreview {
+    width: 135px;
+  }
+
+  .boosterPackImage {
+    max-height: 235px;
+  }
+
+  .boosterPackFallback {
+    width: 135px;
+    height: 225px;
+  }
+}
+
+
 
 .realBoosterOverlay small {
   color: white;
@@ -2353,5 +3192,597 @@
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
+  }
+}
+/* =========================================
+   OUVERTURE SIMPLE DU BOOSTER
+========================================= */
+
+.simplePackStage {
+  position: relative;
+
+  width: min(
+    270px,
+    68vw
+  );
+
+  height: min(
+    470px,
+    67vh
+  );
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  isolation: isolate;
+}
+
+
+/* =========================================
+   PREMIERE CARTE DERRIERE LE BOOSTER
+========================================= */
+
+.firstCardBehind {
+  position: absolute;
+
+  z-index: 1;
+
+  left: 50%;
+  top: 50%;
+
+  width: 72%;
+
+  aspect-ratio:
+    0.715;
+
+  transform:
+    translate(
+      -50%,
+      -46%
+    )
+    scale(.96);
+
+  border-radius: 10px;
+
+  overflow: hidden;
+
+  background:
+    #151923;
+
+  box-shadow:
+    0 20px 40px
+    rgba(
+      0,
+      0,
+      0,
+      .48
+    );
+
+  opacity: 0;
+
+  transition:
+    opacity 400ms ease,
+    transform 800ms ease;
+
+  pointer-events: none;
+}
+
+
+.firstCardBehind img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+
+.firstCardFallback {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+
+  place-items: center;
+
+  background:
+    #111827;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      .7
+    );
+
+  font-weight: 900;
+}
+
+
+/*
+ * La carte devient visible pendant
+ * que le sachet tombe.
+ */
+.firstCardWaiting {
+  animation:
+    firstCardAppear
+    700ms
+    760ms
+    ease-out
+    forwards;
+}
+
+
+@keyframes firstCardAppear {
+  from {
+    opacity: 0;
+
+    transform:
+      translate(
+        -50%,
+        -40%
+      )
+      scale(.96);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translate(
+        -50%,
+        -50%
+      )
+      scale(1);
+  }
+}
+
+
+/* =========================================
+   BOOSTER
+========================================= */
+
+.simplePackButton {
+  position: relative;
+
+  z-index: 4;
+
+  width: 230px;
+
+  padding: 0;
+
+  border: 0;
+
+  background:
+    transparent;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+
+.simplePackButton:disabled {
+  opacity: 1;
+
+  cursor: default;
+}
+
+
+.simplePackVisual {
+  position: relative;
+
+  width: 100%;
+
+  aspect-ratio:
+    .58;
+
+  filter:
+    drop-shadow(
+      0 25px 30px
+      rgba(
+        0,
+        0,
+        0,
+        .52
+      )
+    );
+}
+
+
+/*
+ * Les deux images sont identiques.
+ *
+ * Le clip-path permet de fabriquer :
+ *
+ * - le petit morceau du haut
+ * - le reste du sachet
+ */
+
+.packBodyImage,
+.packTopImage {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: contain;
+
+  pointer-events: none;
+  user-select: none;
+
+  will-change:
+    transform,
+    opacity;
+}
+
+
+/* Corps = tout sauf ~13 % du haut */
+
+.packBodyImage {
+  z-index: 3;
+
+  clip-path:
+    inset(
+      13% 0 0 0
+    );
+}
+
+
+/* Partie coupée */
+
+.packTopImage {
+  z-index: 5;
+
+  clip-path:
+    inset(
+      0 0 87% 0
+    );
+}
+
+
+/* =========================================
+   TRAIT DE DECOUPE
+========================================= */
+
+.simpleCutLine {
+  position: absolute;
+
+  z-index: 8;
+
+  left: 4%;
+  top: 13%;
+
+  width: 92%;
+  height: 2px;
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      .92
+    );
+
+  box-shadow:
+    0 0 7px
+    rgba(
+      255,
+      255,
+      255,
+      .4
+    );
+
+  transform:
+    scaleX(0);
+
+  transform-origin:
+    left center;
+
+  opacity: 0;
+}
+
+
+/* =========================================
+   ANIMATION
+========================================= */
+
+/*
+ * Etape 1
+ *
+ * Le trait traverse simplement
+ * le haut du booster.
+ */
+.simplePackOpening
+.simpleCutLine {
+  animation:
+    simpleCut
+    450ms
+    ease-out
+    forwards;
+}
+
+
+@keyframes simpleCut {
+  0% {
+    transform:
+      scaleX(0);
+
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      scaleX(1);
+
+    opacity: .85;
+  }
+}
+
+
+/*
+ * Etape 2
+ *
+ * Le petit morceau supérieur
+ * se détache doucement.
+ */
+.simplePackOpening
+.packTopImage {
+  animation:
+    simpleTopCut
+    600ms
+    360ms
+    cubic-bezier(
+      .22,
+      .8,
+      .25,
+      1
+    )
+    forwards;
+}
+
+
+@keyframes simpleTopCut {
+  0% {
+    transform:
+      translate3d(
+        0,
+        0,
+        0
+      )
+      rotate(0);
+
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate3d(
+        18px,
+        -42px,
+        0
+      )
+      rotate(8deg);
+
+    opacity: 0;
+  }
+}
+
+
+/*
+ * Etape 3
+ *
+ * Le reste du sachet tombe.
+ *
+ * Pas d'explosion,
+ * pas de particules,
+ * pas de flash.
+ */
+.simplePackOpening
+.packBodyImage {
+  animation:
+    simplePackDrop
+    900ms
+    680ms
+    cubic-bezier(
+      .4,
+      0,
+      .7,
+      1
+    )
+    forwards;
+}
+
+
+@keyframes simplePackDrop {
+  0% {
+    transform:
+      translate3d(
+        0,
+        0,
+        0
+      );
+
+    opacity: 1;
+  }
+
+  25% {
+    transform:
+      translate3d(
+        0,
+        12px,
+        0
+      );
+
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate3d(
+        0,
+        330px,
+        0
+      );
+
+    opacity: 0;
+  }
+}
+
+
+/* =========================================
+   TEXTE
+========================================= */
+
+.simplePackInstruction {
+  min-height: 45px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 5px;
+
+  margin-top: 6px;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      .55
+    );
+
+  font-size: 12px;
+
+  text-align: center;
+}
+
+
+.simplePackInstruction strong {
+  color: white;
+
+  font-size: 14px;
+}
+
+
+.simplePackInstruction span {
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      .52
+    );
+}
+
+
+/* =========================================
+   FALLBACK
+========================================= */
+
+.simplePackFallback {
+  width: 230px;
+  height: 390px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      .12
+    );
+
+  border-radius: 14px;
+
+  background:
+    #121826;
+}
+
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (
+  max-width: 700px
+) {
+  .simplePackStage {
+    width:
+      min(
+        220px,
+        62vw
+      );
+
+    height:
+      min(
+        390px,
+        60vh
+      );
+  }
+
+
+  .simplePackButton {
+    width: 190px;
+  }
+
+
+  .simplePackFallback {
+    width: 190px;
+    height: 320px;
+  }
+
+
+  @keyframes simplePackDrop {
+    0% {
+      transform:
+        translate3d(
+          0,
+          0,
+          0
+        );
+
+      opacity: 1;
+    }
+
+    100% {
+      transform:
+        translate3d(
+          0,
+          250px,
+          0
+        );
+
+      opacity: 0;
+    }
   }
 }

@@ -23,6 +23,7 @@ import {
 import {
   getBoosterImage,
 } from "@/lib/tcg-assets";
+
 type Props = {
   open: boolean;
   cards: RevealCard[];
@@ -321,7 +322,7 @@ export default function BoosterRevealModal({
   // la face avant est lisible, sans attendre la fin complète de la rotation.
   // L'impact de rareté est déclenché juste avant la fin du retournement.
 
-  if (!open || !current || !profile) return null;
+
 
   const resetCardState = () => {
     clearTimers();
@@ -340,11 +341,12 @@ export default function BoosterRevealModal({
     const timer = window.setTimeout(() => {
       setScene("cards");
       setPackOpening(false);
-    }, 720);
+    }, 1750);
 
     timersRef.current.push(timer);
   };
-
+  
+  if (!open || !current || !profile) return null;
   const nextCard = () => {
     if (!revealed) return;
 
@@ -726,118 +728,146 @@ function PackIntro({
       setCode
     );
 
-  return (
-    <main className={styles.packScene}>
-      <div className={styles.packAura} />
+  const cardBack =
+    getCardBack(
+      gameKey
+    );
 
-      <button
-        type="button"
-        className={`${styles.packButton} ${
-          opening
-            ? styles.packOpening
-            : ""
-        }`}
-        onClick={onOpen}
-        disabled={opening}
+  return (
+    <main
+      className={
+        styles.packScene
+      }
+    >
+      <div
+        className={
+          styles.simplePackStage
+        }
       >
-        {boosterImage ? (
-          <>
+        {/* Première carte derrière
+            le sachet */}
+        <div
+          className={`
+            ${styles.firstCardBehind}
+            ${
+              opening
+                ? styles.firstCardWaiting
+                : ""
+            }
+          `}
+          aria-hidden="true"
+        >
+          {cardBack ? (
             <img
-              className={
-                styles.realBoosterImage
-              }
-              src={boosterImage}
-              alt={`${game} ${setCode ?? ""}`}
+              src={cardBack}
+              alt=""
               draggable={false}
             />
-
+          ) : (
             <div
               className={
-                styles.realBoosterOverlay
+                styles.firstCardFallback
               }
             >
-              <small>
-                {opening
-                  ? "OUVERTURE..."
-                  : "TOUCHER POUR OUVRIR"}
-              </small>
+              TCG
             </div>
-          </>
-        ) : (
-          <>
-            {/* Fallback :
-                booster générique actuel */}
+          )}
+        </div>
+
+
+        {/* Booster */}
+        <button
+          type="button"
+          className={`
+            ${styles.simplePackButton}
+            ${
+              opening
+                ? styles.simplePackOpening
+                : ""
+            }
+          `}
+          onClick={onOpen}
+          disabled={opening}
+          aria-label={
+            opening
+              ? "Ouverture du booster"
+              : `Ouvrir le booster ${setCode ?? ""}`
+          }
+        >
+          {boosterImage ? (
             <div
-              className={`${styles.packHalf} ${styles.packTop}`}
+              className={
+                styles.simplePackVisual
+              }
             >
+              {/* Partie principale */}
+              <img
+                src={boosterImage}
+                alt=""
+                draggable={false}
+                className={
+                  styles.packBodyImage
+                }
+              />
+
+              {/* Partie supérieure */}
+              <img
+                src={boosterImage}
+                alt=""
+                draggable={false}
+                className={
+                  styles.packTopImage
+                }
+              />
+
+              {/* Ligne de découpe */}
               <div
                 className={
-                  styles.packFoil
+                  styles.simpleCutLine
                 }
               />
             </div>
-
-            <div
-              className={`${styles.packHalf} ${styles.packBottom}`}
-            >
-              <div
-                className={
-                  styles.packFoil
-                }
-              />
-            </div>
-
+          ) : (
             <div
               className={
-                styles.packContent
+                styles.simplePackFallback
               }
             >
-              <span
-                className={
-                  styles.packKicker
-                }
-              >
-                TCG GAME
-              </span>
-
               <strong>
                 {game}
               </strong>
 
               <span>
-                {setCode || "BOOSTER"}
+                {setCode ??
+                  "BOOSTER"}
               </span>
-
-              <div
-                className={
-                  styles.packLine
-                }
-              />
-
-              <small>
-                {opening
-                  ? "OUVERTURE..."
-                  : "TOUCHER POUR OUVRIR"}
-              </small>
             </div>
+          )}
+        </button>
+      </div>
 
-            <div
-              className={
-                styles.tearLine
-              }
-            />
-          </>
-        )}
-      </button>
 
-      <p
+      <div
         className={
-          styles.packInstruction
+          styles.simplePackInstruction
         }
       >
-        Les cartes seront révélées
-        du bulk vers les hits.
-      </p>
+        {opening ? (
+          "Ouverture..."
+        ) : (
+          <>
+            <strong>
+              {setCode ??
+                "Booster"}
+            </strong>
+
+            <span>
+              Cliquer sur le booster
+              pour l&apos;ouvrir
+            </span>
+          </>
+        )}
+      </div>
     </main>
   );
 }

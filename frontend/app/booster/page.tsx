@@ -6,13 +6,27 @@ import {
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+} from "next/navigation";
 
-import BoosterRevealModal from "@/components/booster/BoosterRevealModal";
-import { apiFetch } from "@/lib/api";
+import BoosterRevealModal
+  from "@/components/booster/BoosterRevealModal";
+
+import BoosterPackPreview
+  from "@/components/booster/BoosterPackPreview";
+
+import SetCollectionProgress
+  from "@/components/booster/SetCollectionProgress";
+
+import {
+  apiFetch,
+} from "@/lib/api";
+
 import {
   createClient,
 } from "@/lib/supabase/client";
+
 import type {
   RevealCard,
 } from "@/lib/reveal-effects";
@@ -23,11 +37,13 @@ type Game =
   | "pokemon"
   | "riftbound";
 
+
 type SetSummary = {
   set_code: string;
   set_name: string;
   card_count: number | null;
 };
+
 
 type Card = {
   card_key: string;
@@ -44,9 +60,11 @@ type Card = {
   is_new?: boolean;
 };
 
+
 type Wallet = {
   balance_coins: number;
 };
+
 
 type BoosterResult = {
   opening_id: number;
@@ -68,109 +86,203 @@ const GAME_LABELS: Record<
 
 export default function BoosterPage() {
   const router = useRouter();
-  const supabase = createClient();
 
-  const [game, setGame] =
-    useState<Game>("onepiece");
+  const supabase =
+    useMemo(
+      () => createClient(),
+      []
+    );
 
-  const [sets, setSets] =
-    useState<SetSummary[]>([]);
 
-  const [setCode, setSetCode] =
+  const [
+    game,
+    setGame,
+  ] =
+    useState<Game>(
+      "onepiece"
+    );
+
+
+  const [
+    sets,
+    setSets,
+  ] =
+    useState<SetSummary[]>(
+      []
+    );
+
+
+  const [
+    setCode,
+    setSetCode,
+  ] =
     useState("");
 
-  const [balance, setBalance] =
-    useState<number | null>(null);
 
-  // Les cartes du dernier booster servent maintenant uniquement
-  // à la révélation animée, plus à une grille immédiate.
+  const [
+    balance,
+    setBalance,
+  ] =
+    useState<number | null>(
+      null
+    );
+
+
+  const [
+    accessToken,
+    setAccessToken,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+
   const [
     revealCards,
     setRevealCards,
-  ] = useState<RevealCard[]>([]);
+  ] =
+    useState<RevealCard[]>(
+      []
+    );
+
 
   const [
     revealOpen,
     setRevealOpen,
-  ] = useState(false);
+  ] =
+    useState(false);
+
 
   const [
     revealSetCode,
     setRevealSetCode,
-  ] = useState("");
+  ] =
+    useState("");
+
 
   const [
     loadingSets,
     setLoadingSets,
-  ] = useState(false);
-
-  const [opening, setOpening] =
+  ] =
     useState(false);
 
-  const [error, setError] =
+
+  const [
+    opening,
+    setOpening,
+  ] =
+    useState(false);
+
+
+  const [
+    error,
+    setError,
+  ] =
     useState("");
 
-  const selectedSet = useMemo(
-    () =>
-      sets.find(
-        (item) =>
-          item.set_code === setCode,
-      ),
-    [sets, setCode],
-  );
 
+  const selectedSet =
+    useMemo(
+      () =>
+        sets.find(
+          (item) =>
+            item.set_code ===
+            setCode
+        ),
+      [
+        sets,
+        setCode,
+      ]
+    );
+
+
+  /*
+   * Chargement utilisateur
+   * + session
+   * + wallet
+   */
   useEffect(() => {
     async function boot() {
       const {
-        data: { user },
-      } = await supabase.auth
-        .getUser();
+        data: {
+          session,
+        },
+      } =
+        await supabase.auth
+          .getSession();
 
-      if (!user) {
-        router.replace("/login");
+
+      if (!session?.user) {
+        router.replace(
+          "/login"
+        );
+
         return;
       }
+
+
+      setAccessToken(
+        session.access_token
+      );
+
 
       try {
         const wallet =
           await apiFetch<Wallet>(
-            "/api/wallet",
+            "/api/wallet"
           );
 
         setBalance(
-          wallet.balance_coins,
+          wallet.balance_coins
         );
       } catch (err) {
         setError(
           err instanceof Error
             ? err.message
-            : "Erreur wallet.",
+            : "Erreur wallet."
         );
       }
     }
 
-    boot();
-  }, [router, supabase]);
 
+    boot();
+  }, [
+    router,
+    supabase,
+  ]);
+
+
+  /*
+   * Chargement des extensions
+   * quand le jeu change.
+   */
   useEffect(() => {
     async function loadSets() {
       setLoadingSets(true);
       setError("");
 
-      // Si le joueur change de jeu, on ferme une éventuelle
-      // révélation précédente et on vide ses cartes.
       setRevealOpen(false);
       setRevealCards([]);
 
+
       try {
         const response =
-          await apiFetch<SetSummary[]>(
-            `/api/catalog/${game}/sets`,
+          await apiFetch<
+            SetSummary[]
+          >(
+            `/api/catalog/${game}/sets`
           );
 
-        setSets(response);
+
+        setSets(
+          response
+        );
+
+
         setSetCode(
-          response[0]?.set_code ?? "",
+          response[0]
+            ?.set_code ??
+          ""
         );
       } catch (err) {
         setSets([]);
@@ -179,289 +291,467 @@ export default function BoosterPage() {
         setError(
           err instanceof Error
             ? err.message
-            : "Impossible de charger les extensions.",
+            : "Impossible de charger les extensions."
         );
       } finally {
-        setLoadingSets(false);
+        setLoadingSets(
+          false
+        );
       }
     }
 
-    loadSets();
-  }, [game]);
 
+    loadSets();
+  }, [
+    game,
+  ]);
+
+
+  /*
+   * Achat + génération du booster.
+   */
   async function openBooster() {
     if (
-      !setCode
-      || opening
-      || revealOpen
+      !setCode ||
+      opening ||
+      revealOpen
     ) {
       return;
     }
+
 
     setOpening(true);
     setError("");
     setRevealCards([]);
 
+
     try {
       const result =
-        await apiFetch<BoosterResult>(
+        await apiFetch<
+          BoosterResult
+        >(
           "/api/boosters/open",
           {
             method: "POST",
-            body: JSON.stringify({
-              game,
-              set_code: setCode,
-            }),
-          },
+
+            body:
+              JSON.stringify({
+                game,
+                set_code:
+                  setCode,
+              }),
+          }
         );
 
-      setBalance(result.balance);
 
-      const returnedCards: RevealCard[] =
-        (result.cards ?? []).map(
+      setBalance(
+        result.balance
+      );
+
+
+      const returnedCards:
+        RevealCard[] =
+        (
+          result.cards ??
+          []
+        ).map(
           (card) => ({
             card_key:
               card.card_key,
+
             game:
-              card.game ?? game,
+              card.game ??
+              game,
+
             name:
               card.name,
+
             image_url:
               card.image_url,
+
             rarity:
               card.rarity,
+
             variant:
               card.variant,
+
             drop_class:
               card.drop_class,
+
             card_number:
               card.card_number,
+
             collectible:
               card.collectible,
-            is_new: 
-              card.is_new ?? false,
 
-            // Ton backend renvoie "slot".
-            // Le moteur visuel accepte "_slot".
+            is_new:
+              card.is_new ??
+              false,
+
             _slot:
               card.slot,
-          }),
+          })
         );
 
+
       if (
-        returnedCards.length === 0
+        returnedCards.length ===
+        0
       ) {
         throw new Error(
-          "Le backend n'a renvoyé aucune carte.",
+          "Le backend n'a renvoyé aucune carte."
         );
       }
 
-      // IMPORTANT :
-      // on N'AFFICHE PLUS les cartes ici en grille.
-      // On ouvre uniquement la cinématique.
+
       setRevealCards(
-        returnedCards,
+        returnedCards
       );
+
+
       setRevealSetCode(
-        setCode,
+        setCode
       );
-      setRevealOpen(true);
+
+
+      setRevealOpen(
+        true
+      );
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Impossible d'ouvrir le booster.",
+          : "Impossible d'ouvrir le booster."
       );
     } finally {
-      setOpening(false);
+      setOpening(
+        false
+      );
     }
   }
 
+
   async function logout() {
-    await supabase.auth.signOut();
-    router.replace("/login");
+    await supabase.auth
+      .signOut();
+
+    router.replace(
+      "/login"
+    );
   }
+
 
   return (
     <>
-      <main className="appShell">
-        <header className="topbar">
+      <main
+        className="appShell"
+      >
+        {/* =========================
+            HEADER
+        ========================= */}
+
+        <header
+          className="topbar"
+        >
           <div>
-            <div className="eyebrow">
+            <div
+              className="eyebrow"
+            >
               TCG GAME
             </div>
-            <strong>Booster Lab</strong>
+
+            <strong>
+              Booster Lab
+            </strong>
           </div>
 
-          <div className="topbarRight">
-            <div className="wallet">
+
+          <div
+            className="topbarRight"
+          >
+            <div
+              className="wallet"
+            >
               {balance === null
                 ? "—"
-                : balance.toLocaleString(
-                    "fr-FR"
-                  )}{" "}
+                : balance
+                    .toLocaleString(
+                      "fr-FR"
+                    )
+              }
+              {" "}
               🪙
             </div>
 
+
             <button
+              type="button"
               className="ghostButton"
               onClick={() =>
-                router.push("/cartedex")
+                router.push(
+                  "/cartedex"
+                )
               }
             >
               Cartédex
             </button>
 
+
             <button
+              type="button"
               className="ghostButton"
-              onClick={logout}
+              onClick={
+                logout
+              }
             >
               Déconnexion
             </button>
           </div>
         </header>
 
-        <section className="hero">
+
+        {/* =========================
+            HERO
+        ========================= */}
+
+        <section
+          className="hero"
+        >
           <div>
-            <div className="eyebrow">
+            <div
+              className="eyebrow"
+            >
               OUVERTURE
             </div>
 
             <h1>
-              Ouvre un booster sans
-              recharger la page.
+              Ouvre un booster
+              sans recharger la
+              page.
             </h1>
 
             <p>
-              React garde l'interface
-              en mémoire. FastAPI n'est
-              appelé que lorsque les
-              données doivent changer.
+              Choisis ton jeu et
+              ton extension,
+              consulte ta
+              progression puis
+              ouvre directement
+              le booster.
             </p>
           </div>
         </section>
 
-        <section className="controls panel">
-          <label>
-            Jeu
-            <select
-              value={game}
-              onChange={(event) =>
-                setGame(
-                  event.target
-                    .value as Game,
-                )
-              }
-            >
-              {Object.entries(
-                GAME_LABELS,
-              ).map(
-                ([value, label]) => (
-                  <option
-                    key={value}
-                    value={value}
-                  >
-                    {label}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
 
-          <label>
-            Extension
-            <select
-              value={setCode}
-              disabled={
-                loadingSets
-                || sets.length === 0
-              }
-              onChange={(event) =>
-                setSetCode(
-                  event.target.value,
-                )
-              }
-            >
-              {sets.map((set) => (
-                <option
-                  key={set.set_code}
-                  value={set.set_code}
-                >
-                  {set.set_code}
-                  {" — "}
-                  {set.set_name}
-                </option>
-              ))}
-            </select>
-          </label>
+        {/* =========================
+            SELECTEURS + COLLECTION
+        ========================= */}
 
-          <button
-            className=
-              "primaryButton openButton"
-            disabled={
-              !setCode
-              || opening
-              || revealOpen
-            }
-            onClick={openBooster}
+        <section
+          className="
+            controls
+            panel
+            boosterControls
+          "
+        >
+          <div
+            className="
+              boosterSelectors
+            "
           >
-            {opening
-              ? "Ouverture..."
-              : "Ouvrir le booster"}
-          </button>
+            <label>
+              Jeu
+
+              <select
+                value={game}
+                onChange={(event) =>
+                  setGame(
+                    event.target.value as Game
+                  )
+                }
+              >
+                {Object.entries(
+                  GAME_LABELS
+                ).map(
+                  ([
+                    value,
+                    label,
+                  ]) => (
+                    <option
+                      key={
+                        value
+                      }
+                      value={
+                        value
+                      }
+                    >
+                      {
+                        label
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
+
+
+            <label>
+              Extension
+
+              <select
+                value={
+                  setCode
+                }
+                disabled={
+                  loadingSets ||
+                  sets.length ===
+                    0
+                }
+                onChange={(
+                  event
+                ) =>
+                  setSetCode(
+                    event
+                      .target
+                      .value
+                  )
+                }
+              >
+                {sets.map(
+                  (set) => (
+                    <option
+                      key={
+                        set
+                          .set_code
+                      }
+                      value={
+                        set
+                          .set_code
+                      }
+                    >
+                      {
+                        set
+                          .set_code
+                      }
+
+                      {" — "}
+
+                      {
+                        set
+                          .set_name
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
+          </div>
+
+
+          {setCode &&
+          accessToken ? (
+            <SetCollectionProgress
+              game={game}
+              setCode={
+                setCode
+              }
+              accessToken={
+                accessToken
+              }
+            />
+          ) : null}
         </section>
 
-        {selectedSet && (
-          <p className="setMeta">
-            {GAME_LABELS[game]}
+
+        {/* =========================
+            INFO EXTENSION
+        ========================= */}
+
+        {selectedSet ? (
+          <p
+            className="setMeta"
+          >
+            {
+              GAME_LABELS[
+                game
+              ]
+            }
+
             {" · "}
-            {selectedSet.set_name}
-            {selectedSet.card_count
+
+            {
+              selectedSet
+                .set_name
+            }
+
+            {selectedSet
+              .card_count
               ? ` · ${selectedSet.card_count} cartes`
               : ""}
           </p>
-        )}
+        ) : null}
 
-        {error && (
-          <div className="errorBox">
+
+        {/* =========================
+            ERREUR
+        ========================= */}
+
+        {error ? (
+          <div
+            className="errorBox"
+          >
             {error}
           </div>
-        )}
+        ) : null}
 
-        {opening && (
-          <section className=
-            "openingStage"
+
+        {/* =========================
+            BOOSTER
+            HORS DU PANEL
+        ========================= */}
+
+        {setCode ? (
+          <section
+            className="
+              boosterStandalone
+            "
           >
-            <div className="pack">
-              <span>
-                {GAME_LABELS[game]}
-              </span>
-              <strong>{setCode}</strong>
-              <small>BOOSTER</small>
-            </div>
-
-            <p>Ouverture...</p>
+            <BoosterPackPreview
+              game={game}
+              setCode={
+                setCode
+              }
+              opening={
+                opening
+              }
+              disabled={
+                opening ||
+                loadingSets
+              }
+              onOpen={
+                openBooster
+              }
+            />
           </section>
-        )}
-
-        {/*
-          IMPORTANT :
-          l'ancienne grille cards.map(...) a volontairement été supprimée.
-
-          BoosterRevealModal gère maintenant :
-          - l'ouverture du paquet ;
-          - la révélation automatique de chaque carte ;
-          - "Carte suivante" ;
-          - le récapitulatif final.
-        */}
+        ) : null}
       </main>
+
+
+      {/* =========================
+          CINÉMATIQUE
+      ========================= */}
 
       <BoosterRevealModal
         open={revealOpen}
-        cards={revealCards}
-        setCode={revealSetCode}
+        cards={
+          revealCards
+        }
+        setCode={
+          revealSetCode
+        }
         onClose={() => {
-          setRevealOpen(false);
+          setRevealOpen(
+            false
+          );
         }}
       />
     </>
