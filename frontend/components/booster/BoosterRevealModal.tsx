@@ -17,7 +17,12 @@ import {
   type RevealProfile,
 } from "@/lib/reveal-effects";
 import styles from "./BoosterRevealModal.module.css";
-
+import {
+  getCardBack,
+} from "@/lib/tcg-assets";
+import {
+  getBoosterImage,
+} from "@/lib/tcg-assets";
 type Props = {
   open: boolean;
   cards: RevealCard[];
@@ -434,6 +439,7 @@ const cssVars = {
       {scene === "pack" ? (
         <PackIntro
           game={gameLabel(current.game)}
+          gameKey={current.game}
           setCode={setCode}
           opening={packOpening}
           onOpen={openPack}
@@ -589,29 +595,36 @@ const cssVars = {
                     <div
                       className={`${styles.cardFace} ${styles.cardBack}`}
                     >
-                      <div
-                        className={styles.backFrame}
-                      >
-                        <div
-                          className={styles.backOrb}
+                      {getCardBack(current.game) ? (
+                        <img
+                          className={styles.realCardBack}
+                          src={
+                            getCardBack(
+                              current.game
+                            )!
+                          }
+                          alt=""
+                          draggable={false}
                         />
-
-                        <span
-                          className={styles.backSmall}
+                      ) : (
+                        <div
+                          className={styles.backFrame}
                         >
-                          TCG
-                        </span>
+                          <div
+                            className={styles.backOrb}
+                          />
 
-                        <strong>
-                          BOOSTER LAB
-                        </strong>
+                          <span
+                            className={styles.backSmall}
+                          >
+                            TCG
+                          </span>
 
-                        <span
-                          className={styles.tapHint}
-                        >
-                          RÉVÉLATION...
-                        </span>
-                      </div>
+                          <strong>
+                            BOOSTER LAB
+                          </strong>
+                        </div>
+                      )}
                     </div>
 
                     <div
@@ -640,8 +653,31 @@ const cssVars = {
             </div>
             
             <div className={styles.mobileMeta}>
-              <strong>{revealed ? current.name : "Carte mystère"}</strong>
-              {revealed ? <span>{cardDetails(current)}</span> : null}
+              <strong>
+                {revealed
+                  ? current.name
+                  : "Carte mystère"}
+              </strong>
+
+              {revealed ? (
+                <>
+                  <span>
+                    {cardDetails(current)}
+                  </span>
+
+                  <div
+                    className={
+                      current.is_new
+                        ? styles.mobileNewCard
+                        : styles.mobileOwnedCard
+                    }
+                  >
+                    {current.is_new
+                      ? "✦ NOUVELLE CARTE"
+                      : "DÉJÀ POSSÉDÉE"}
+                  </div>
+                </>
+              ) : null}
             </div>
           </section>
 
@@ -673,50 +709,139 @@ const cssVars = {
 
 function PackIntro({
   game,
+  gameKey,
   setCode,
   opening,
   onOpen,
 }: {
   game: string;
+  gameKey: string;
   setCode?: string;
   opening: boolean;
   onOpen: () => void;
 }) {
+  const boosterImage =
+    getBoosterImage(
+      gameKey,
+      setCode
+    );
+
   return (
     <main className={styles.packScene}>
       <div className={styles.packAura} />
 
       <button
         type="button"
-        className={`${styles.packButton} ${opening ? styles.packOpening : ""}`}
+        className={`${styles.packButton} ${
+          opening
+            ? styles.packOpening
+            : ""
+        }`}
         onClick={onOpen}
         disabled={opening}
       >
-        <div className={`${styles.packHalf} ${styles.packTop}`}>
-          <div className={styles.packFoil} />
-        </div>
+        {boosterImage ? (
+          <>
+            <img
+              className={
+                styles.realBoosterImage
+              }
+              src={boosterImage}
+              alt={`${game} ${setCode ?? ""}`}
+              draggable={false}
+            />
 
-        <div className={`${styles.packHalf} ${styles.packBottom}`}>
-          <div className={styles.packFoil} />
-        </div>
+            <div
+              className={
+                styles.realBoosterOverlay
+              }
+            >
+              <small>
+                {opening
+                  ? "OUVERTURE..."
+                  : "TOUCHER POUR OUVRIR"}
+              </small>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Fallback :
+                booster générique actuel */}
+            <div
+              className={`${styles.packHalf} ${styles.packTop}`}
+            >
+              <div
+                className={
+                  styles.packFoil
+                }
+              />
+            </div>
 
-        <div className={styles.packContent}>
-          <span className={styles.packKicker}>TCG GAME</span>
-          <strong>{game}</strong>
-          <span>{setCode || "BOOSTER"}</span>
-          <div className={styles.packLine} />
-          <small>{opening ? "OUVERTURE..." : "TOUCHER POUR OUVRIR"}</small>
-        </div>
+            <div
+              className={`${styles.packHalf} ${styles.packBottom}`}
+            >
+              <div
+                className={
+                  styles.packFoil
+                }
+              />
+            </div>
 
-        <div className={styles.tearLine} />
+            <div
+              className={
+                styles.packContent
+              }
+            >
+              <span
+                className={
+                  styles.packKicker
+                }
+              >
+                TCG GAME
+              </span>
+
+              <strong>
+                {game}
+              </strong>
+
+              <span>
+                {setCode || "BOOSTER"}
+              </span>
+
+              <div
+                className={
+                  styles.packLine
+                }
+              />
+
+              <small>
+                {opening
+                  ? "OUVERTURE..."
+                  : "TOUCHER POUR OUVRIR"}
+              </small>
+            </div>
+
+            <div
+              className={
+                styles.tearLine
+              }
+            />
+          </>
+        )}
       </button>
 
-      <p className={styles.packInstruction}>
-        Les cartes seront révélées du bulk vers les hits.
+      <p
+        className={
+          styles.packInstruction
+        }
+      >
+        Les cartes seront révélées
+        du bulk vers les hits.
       </p>
     </main>
   );
 }
+
 function SparkBuildTeaser({
   card,
   profile,
