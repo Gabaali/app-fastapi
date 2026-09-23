@@ -13,9 +13,6 @@ from .card_catalog import connect_catalog, load_cards
 from .drop_profiles import (
     POKEMON_PROFILES,
     POKEMON_SUPPORTED_SET_IDS,
-    RIFTBOUND_FOIL_WEIGHTS,
-    RIFTBOUND_PROFILES,
-    RIFTBOUND_SUPPORTED_SET_IDS,
 )
 
 
@@ -518,23 +515,68 @@ def _simulate_pokemon(set_code: str) -> list[CardOut]:
 # RIFTBOUND
 # ============================================================
 
-def _rift_rarity_key(value: object) -> str:
-    text = _clean(value)
+def _rift_booster_config(
+    set_code: str,
+) -> tuple[dict[str, float], dict, dict[str, dict]]:
+    """Charge toute la configuration Riftbound depuis le SQLite.
 
-    if "uncommon" in text or "peu commune" in text or "peu commun" in text:
-        return "uncommon"
-    if text in {"common", "commune", "commun"}:
-        return "common"
-    if "ultimate" in text or "ultime" in text:
-        return "ultimate"
-    if "epic" in text or "epique" in text:
-        return "epic"
-    if "rare" in text:
-        return "rare"
-    if "token" in text or "rune" in text:
-        return "token"
+    - booster_rates: probabilités / poids
+    - booster_rules: structure du booster
+    - drop_tier_rules: comportement des catégories de cartes
+    """
+    with connect_catalog("riftbound") as conn:
+        rule_row = conn.execute(
+            """
+            SELECT
+                set_code,
+                booster_enabled,
+                cards_per_pack,
+                common_slots,
+                uncommon_slots,
+                rare_plus_slots,
+                foil_slots,
+                rune_token_slots,
+                alt_rune_force_first_reveal,
+                premium_max_per_pack
+            FROM booster_rules
+            WHERE set_code = ?
+            """,
+            (set_code,),
+        ).fetchone()
 
-    return re.sub(r"[^a-z0-9]+", "_", text).strip("_") or "unknown"
+        rate_rows = conn.execute(
+            """
+            SELECT rate_key, rate_value
+            FROM booster_rates
+            WHERE set_code = ?
+            """,
+            (set_code,),
+        ).fetchall()
+
+        tier_rows = conn.execute(
+            """
+            SELECT
+                drop_tier,
+                pool_group,
+                enabled_in_boosters,
+                force_first_reveal,
+                reveal_priority,
+                replaces_slot
+            FROM drop_tier_rules
+            """
+        ).fetchall()
+
+    rule = dict(rule_row) if rule_row else {}
+    rates = {
+        str(row["rate_key"]).upper(): float(row["rate_value"] or 0.0)
+        for row in rate_rows
+    }
+    tier_rules = {
+        str(row["drop_tier"]).upper(): dict(row)
+        for row in tier_rows
+    }
+
+    return rates, rule, tier_rules
 
 
 def _rift_metadata(set_code: str) -> dict[str, dict]:
@@ -569,115 +611,73 @@ def _rift_metadata(set_code: str) -> dict[str, dict]:
 def _rift_pools(
     cards: list[CardOut],
     metadata: dict[str, dict],
-):
-    base = defaultdict(list)
-    premium = defaultdict(list)
-
-    token_rune = []
-    alt_rune = []
-
-    for card in cards:
-        meta = metadata.get(
-            card.card_number,
-            {},
-        )
-
-        tier = str(
-            meta.get("drop_tier") or ""
-        ).upper()
-
-        if tier == "COMMON_BASE":
-            base["common"].append(card)
-
-        elif tier == "UNCOMMON_BASE":
-            base["uncommon"].append(card)
-
-        elif tier == "RARE_BASE":
-            base["rare"].append(card)
-
-        elif tier == "EPIC_BASE":
-            base["epic"].append(card)
-
-        elif tier == "RUNE_TOKEN_BASE":
-            token_rune.append(card)
-
-        elif tier == "ALT_RUNE":
-            alt_rune.append(card)
-
-        elif tier == "ALT_ART":
-            premium["alt"].append(card)
-
-        elif tier == "OVERNUMBERED":
-            premium["overnumber"].append(card)
-
-        elif tier == "SIGNATURE_OVERNUMBERED":
-            premium["signature"].append(card)
-
-        elif tier == "SPECIAL_ALT":
-            premium["special_alt"].append(card)
-
-        elif tier == "ULTIMATE":
-            premium["ultimate"].append(card)
-
-        # NON_BOOSTER et UNKNOWN_SPECIAL
-        # ne doivent jamais tomber dans un booster.
-
-    return (
-        base,
-        premium,
-        token_rune,
-        alt_rune,
-    )
-
-def _rift_pools(
-    cards: list[CardOut],
-    metadata: dict[str, dict],
+    tier_rules: dict[str, dict],
 ) -> tuple[
     dict[str, list[CardOut]],
     dict[str, list[CardOut]],
     list[CardOut],
+    list[CardOut],
 ]:
+    """Répartit les cartes exclusivement à partir de cards.drop_tier.
+
+    On ne déduit plus les traitements via is_alt_art / collector_number.
+    Le SQLite est désormais la source de vérité.
+    """
     base: dict[str, list[CardOut]] = defaultdict(list)
     premium: dict[str, list[CardOut]] = defaultdict(list)
     token_rune: list[CardOut] = []
+    alt_rune: list[CardOut] = []
 
     for card in cards:
         meta = metadata.get(card.card_number, {})
-        treatment = _rift_treatment(meta)
-        rarity_key = _rift_rarity_key(card.rarity)
+        drop_tier = str(meta.get("drop_tier") or "").upper()
+        rule = tier_rules.get(drop_tier, {})
 
-        if treatment == "token":
+        if not drop_tier or not int(rule.get("enabled_in_boosters") or 0):
+            continue
+
+        pool_group = str(rule.get("pool_group") or "").strip().lower()
+
+        if pool_group in {"common", "uncommon", "rare", "epic"}:
+            base[pool_group].append(card)
+        elif pool_group == "rune_token":
             token_rune.append(card)
-        elif treatment == "base":
-            base[rarity_key].append(card)
-        else:
-            premium[treatment].append(card)
+        elif pool_group == "alt_rune":
+            alt_rune.append(card)
+        elif pool_group.startswith("premium_"):
+            premium[pool_group.removeprefix("premium_")].append(card)
 
-    return base, premium, token_rune
+    return base, premium, token_rune, alt_rune
 
 
-def _rift_epic_slot_probability(epic_pack_probability: float) -> float:
-    # Two independent Rare+ slots:
-    # 1 - (1 - p_slot)^2 = p_pack
+def _rift_epic_slot_probability(
+    epic_pack_probability: float,
+    rare_plus_slots: int,
+) -> float:
+    """Convertit une probabilité par booster en probabilité par slot Rare+."""
+    slot_count = max(1, int(rare_plus_slots))
     p_pack = max(0.0, min(0.999999, float(epic_pack_probability)))
-    return 1.0 - math.sqrt(1.0 - p_pack)
+    return 1.0 - math.pow(1.0 - p_pack, 1.0 / slot_count)
 
 
 def _simulate_riftbound(set_code: str) -> list[CardOut]:
-    if set_code not in RIFTBOUND_SUPPORTED_SET_IDS:
+    rates, booster_rule, tier_rules = _rift_booster_config(set_code)
+
+    if not booster_rule or not int(booster_rule.get("booster_enabled") or 0):
         raise ValueError(
             f"Le set Riftbound {set_code} n'est pas un booster supporté."
         )
 
-    profile = RIFTBOUND_PROFILES[set_code]
     cards = load_cards("riftbound", set_code)
     metadata = _rift_metadata(set_code)
 
     if not cards:
         raise ValueError(f"Aucune carte pour riftbound/{set_code}.")
 
-    base, premium, token_rune, alt_rune = (
-        _rift_pools(cards, metadata)
+    base, premium, token_rune, alt_rune = _rift_pools(
+        cards,
+        metadata,
+        tier_rules,
     )
 
     common = base.get("common", [])
@@ -685,62 +685,72 @@ def _simulate_riftbound(set_code: str) -> list[CardOut]:
     rare = base.get("rare", [])
     epic = base.get("epic", [])
 
+    cards_per_pack = int(booster_rule.get("cards_per_pack") or 14)
+    common_slots = int(booster_rule.get("common_slots") or 7)
+    uncommon_slots = int(booster_rule.get("uncommon_slots") or 3)
+    rare_plus_slots = int(booster_rule.get("rare_plus_slots") or 2)
+    foil_slots = int(booster_rule.get("foil_slots") or 1)
+    rune_token_slots = int(booster_rule.get("rune_token_slots") or 1)
+    premium_max = int(booster_rule.get("premium_max_per_pack") or 0)
+
     used: set[str] = set()
     pack: list[CardOut] = []
 
-    for _ in range(7):
+    # 7 Common (ou valeur configurée dans booster_rules)
+    for _ in range(common_slots):
         card = _with_slot(_draw(common, used), "Common")
         if card:
             pack.append(card)
 
-    for _ in range(3):
+    # 3 Uncommon (ou valeur configurée dans booster_rules)
+    for _ in range(uncommon_slots):
         card = _with_slot(_draw(uncommon, used), "Uncommon")
         if card:
             pack.append(card)
 
-    # At most one premium treatment consumes one of the two Rare+ slots.
+    # Au maximum un premium dans le modèle actuel.
+    # Les taux sont des probabilités absolues par booster et sont mutuellement
+    # exclusifs grâce à un seul tirage cumulatif.
     premium_order = [
-        ("ultimate", profile.get("ultimate_pack", 0.0)),
-        ("signature", profile.get("signature_pack", 0.0)),
-        ("overnumber", profile.get("overnumber_pack", 0.0)),
-        ("special_alt", profile.get("special_alt_pack", 0.0)),
-        ("alt", profile.get("alt_pack", 0.0)),
+        ("ultimate", "ULTIMATE", "Ultimate"),
+        ("signature", "SIGNATURE_OVERNUMBERED", "Signature Overnumbered"),
+        ("overnumber", "OVERNUMBERED", "Overnumbered"),
+        ("special_alt", "SPECIAL_ALT", "Special Alt"),
+        ("alt", "ALT_ART", "Alt Art"),
     ]
 
     premium_card: CardOut | None = None
-    roll = random.random()
-    cumulative = 0.0
 
-    for treatment, probability in premium_order:
-        pool = premium.get(treatment, [])
+    if premium_max > 0:
+        roll = random.random()
+        cumulative = 0.0
 
-        # Vendetta's Special Alt cards are represented as alt cards in the DB;
-        # use the alt pool when a dedicated pool is unavailable.
-        if treatment == "special_alt" and not pool:
-            pool = premium.get("alt", [])
+        for pool_key, rate_key, label in premium_order:
+            pool = premium.get(pool_key, [])
+            probability = max(0.0, float(rates.get(rate_key, 0.0)))
 
-        if not pool:
-            continue
+            if not pool or probability <= 0:
+                continue
 
-        cumulative += max(0.0, float(probability))
-        if roll < cumulative:
-            variant_label = treatment.replace("_", " ").title()
-            premium_card = _with_slot(
-                _draw(pool, used),
-                variant_label,
-                variant=variant_label,
-            )
-            break
+            cumulative += probability
+            if roll < cumulative:
+                premium_card = _with_slot(
+                    _draw(pool, used),
+                    label,
+                    variant=label,
+                )
+                break
 
     rare_plus: list[CardOut] = []
     if premium_card:
         rare_plus.append(premium_card)
 
     epic_slot_probability = _rift_epic_slot_probability(
-        profile.get("epic_pack", 0.25)
+        rates.get("EPIC_BASE", 0.0),
+        rare_plus_slots,
     )
 
-    while len(rare_plus) < 2:
+    while len(rare_plus) < rare_plus_slots:
         if epic and random.random() < epic_slot_probability:
             card = _with_slot(_draw(epic, used), "Epic")
         else:
@@ -755,56 +765,129 @@ def _simulate_riftbound(set_code: str) -> list[CardOut]:
 
     pack.extend(rare_plus)
 
-    # Dedicated foil slot. Riot only describes the distribution qualitatively,
-    # so these C/U/R/E weights remain a clearly marked model assumption.
-    foil_class = random.choices(
-        list(RIFTBOUND_FOIL_WEIGHTS),
-        weights=list(RIFTBOUND_FOIL_WEIGHTS.values()),
-        k=1,
-    )[0]
+    # Slot(s) Foil : poids stockés dans booster_rates.
+    foil_weights = {
+        "common": max(0.0, rates.get("FOIL_COMMON", 0.0)),
+        "uncommon": max(0.0, rates.get("FOIL_UNCOMMON", 0.0)),
+        "rare": max(0.0, rates.get("FOIL_RARE", 0.0)),
+        "epic": max(0.0, rates.get("FOIL_EPIC", 0.0)),
+    }
+    foil_weights = {
+        key: value
+        for key, value in foil_weights.items()
+        if value > 0 and base.get(key)
+    }
 
-    foil_pool = base.get(foil_class, [])
-    if not foil_pool:
-        foil_pool = common + uncommon
-
-    foil = _draw(foil_pool, allow_repeat=True)
-    if foil:
-        current_variant = str(foil.variant or "").strip()
-        variant = f"{current_variant} · Foil" if current_variant else "Foil"
-        foil = _with_slot(foil, "Foil", variant=variant)
-        pack.append(foil)
-
-    token = _with_slot(
-        _draw(token_rune, allow_repeat=True),
-        "Token / Rune",
-    )
-
-    if token:
-        pack.append(token)
-    else:
-        pack.append(
-            CardOut(
-                card_key=f"virtual-rift-token-{secrets.token_hex(8)}",
-                game="riftbound",
-                product_set=set_code,
-                card_number="—",
-                name="Token / Rune",
-                rarity="Token",
-                variant="",
-                drop_class="Token / Rune",
-                image_url=None,
-                collectible=False,
-                slot="Token / Rune",
-            )
+    for _ in range(foil_slots):
+        foil_class = (
+            random.choices(
+                list(foil_weights),
+                weights=list(foil_weights.values()),
+                k=1,
+            )[0]
+            if foil_weights
+            else "common"
         )
 
-    while len(pack) < 14:
+        foil_pool = base.get(foil_class, []) or common + uncommon
+        foil = _draw(foil_pool, allow_repeat=True)
+
+        if foil:
+            current_variant = str(foil.variant or "").strip()
+            variant = f"{current_variant} · Foil" if current_variant else "Foil"
+            foil = _with_slot(foil, "Foil", variant=variant)
+            pack.append(foil)
+
+    # Rune / Token. ALT_RUNE possède son propre taux et son propre pool.
+    # Si elle tombe, elle remplace le Rune/Token normal.
+    alt_rune_probability = max(0.0, float(rates.get("ALT_RUNE", 0.0)))
+    alt_rune_rule = tier_rules.get("ALT_RUNE", {})
+    force_alt_rune_first = bool(
+        int(booster_rule.get("alt_rune_force_first_reveal") or 0)
+        and int(alt_rune_rule.get("force_first_reveal") or 0)
+    )
+
+    for _ in range(rune_token_slots):
+        is_alt_rune = bool(
+            alt_rune
+            and alt_rune_probability > 0
+            and random.random() < alt_rune_probability
+        )
+
+        if is_alt_rune:
+            token = _with_slot(
+                _draw(alt_rune, allow_repeat=True),
+                "Alt Rune",
+                variant="Alt Rune",
+            )
+        else:
+            token = _with_slot(
+                _draw(token_rune, allow_repeat=True),
+                "Token / Rune",
+            )
+
+        if token:
+            # Important : le frontend possède aussi une règle correspondante
+            # car il trie normalement les cartes par rareté avant révélation.
+            if is_alt_rune and force_alt_rune_first:
+                pack.insert(0, token)
+            else:
+                pack.append(token)
+        else:
+            pack.append(
+                CardOut(
+                    card_key=f"virtual-rift-token-{secrets.token_hex(8)}",
+                    game="riftbound",
+                    product_set=set_code,
+                    card_number="—",
+                    name="Token / Rune",
+                    rarity="Token",
+                    variant="",
+                    drop_class="RUNE_TOKEN_BASE",
+                    image_url=None,
+                    collectible=False,
+                    slot="Token / Rune",
+                )
+            )
+
+    while len(pack) < cards_per_pack:
         card = _with_slot(_draw(common, allow_repeat=True), "Common")
         if card is None:
             break
         pack.append(card)
 
-    return pack[:14]
+    return pack[:cards_per_pack]
+
+
+# ============================================================
+# DRAPEAUX DU MONDE
+# ============================================================
+
+FLAGS_CARDS_PER_PACK = 5
+
+
+def _simulate_flags(set_code: str) -> list[CardOut]:
+    cards = load_cards("flags", set_code)
+
+    if not cards:
+        raise ValueError(
+            f"Aucun drapeau pour flags/{set_code}."
+        )
+
+    if len(cards) <= FLAGS_CARDS_PER_PACK:
+        selected = list(cards)
+    else:
+        selected = random.sample(
+            cards,
+            FLAGS_CARDS_PER_PACK,
+        )
+
+    return [
+        card.model_copy(
+            update={"slot": "Drapeau"}
+        )
+        for card in selected
+    ]
 
 
 # ============================================================
@@ -820,5 +903,8 @@ def simulate_booster(game: Game, set_code: str) -> list[CardOut]:
 
     if game == "riftbound":
         return _simulate_riftbound(set_code)
+
+    if game == "flags":
+        return _simulate_flags(set_code)
 
     raise ValueError(f"Jeu non supporté: {game}")
