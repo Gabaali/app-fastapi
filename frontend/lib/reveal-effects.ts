@@ -1,4 +1,4 @@
-export type GameKey = "onepiece" | "pokemon" | "riftbound";
+export type GameKey = "onepiece" | "pokemon" | "riftbound" | "flags";
 
 export type RevealCard = {
   card_key?: string;
@@ -15,6 +15,7 @@ export type RevealCard = {
   card_number?: string | null;
   collectible?: boolean;
   is_new?: boolean;
+  metadata?: Record<string, string> | null;
 };
 
 export type RevealTier = "basic" | "rare" | "premium" | "chase";
@@ -56,9 +57,18 @@ function cardText(card: RevealCard) {
   );
 }
 
+function isAltRune(card: RevealCard) {
+  const text = cardText(card).replace(/_/g, " ");
+  return card.game === "riftbound" && text.includes("alt rune");
+}
+
 export function rarityRank(card: RevealCard): number {
   const game = card.game;
   const text = cardText(card);
+
+  if (game === "flags") {
+    return 30;
+  }
 
   if (game === "onepiece") {
     if (text.includes("manga") || text.includes("comic")) return 100;
@@ -102,6 +112,8 @@ export function rarityRank(card: RevealCard): number {
     return 30;
   }
 
+  if (isAltRune(card)) return 86;
+
   const order: Array<[string, number]> = [
     ["ultimate", 100],
     ["signature", 95],
@@ -125,7 +137,18 @@ export function rarityRank(card: RevealCard): number {
 }
 
 export function sortCardsForReveal(cards: RevealCard[]) {
-  return [...cards].sort((a, b) => rarityRank(a) - rarityRank(b));
+  return [...cards].sort((a, b) => {
+    // Une ALT_RUNE est un cas spécial : elle doit être la première carte
+    // révélée, même si sa rareté visuelle est élevée.
+    const aAltRune = isAltRune(a);
+    const bAltRune = isAltRune(b);
+
+    if (aAltRune !== bAltRune) {
+      return aAltRune ? -1 : 1;
+    }
+
+    return rarityRank(a) - rarityRank(b);
+  });
 }
 
 function baseProfile(card: RevealCard) {
@@ -141,6 +164,18 @@ function baseProfile(card: RevealCard) {
       secondary: "#adb5bd",
       accent: "#ffffff",
       baseDuration: 620,
+      flash: false,
+    };
+  }
+
+  if (game === "flags") {
+    return {
+      name: "soft",
+      label: "DRAPEAU",
+      primary: "#3b82f6",
+      secondary: "#22c55e",
+      accent: "#ffffff",
+      baseDuration: 800,
       flash: false,
     };
   }
@@ -216,6 +251,9 @@ function baseProfile(card: RevealCard) {
     return { name: "soft", label: "", primary: "#5aa9e6", secondary: "#4361ee", accent: "#ffffff", baseDuration: 760, flash: false };
   }
 
+  if (isAltRune(card)) {
+    return { name: "prism", label: "ALT RUNE", primary: "#62f6ff", secondary: "#8b5cf6", accent: "#fff4a3", baseDuration: 1280, flash: true };
+  }
   if (text.includes("ultimate")) {
     return { name: "legendary", label: "ULTIMATE", primary: "#fff2a8", secondary: "#9d4edd", accent: "#66ffff", baseDuration: 1550, flash: true };
   }
@@ -301,5 +339,6 @@ export function getRevealProfile(card: RevealCard): RevealProfile {
 export function gameLabel(game: GameKey) {
   if (game === "onepiece") return "ONE PIECE";
   if (game === "pokemon") return "POKÉMON";
+  if (game === "flags") return "DRAPEAUX DU MONDE";
   return "RIFTBOUND";
 }

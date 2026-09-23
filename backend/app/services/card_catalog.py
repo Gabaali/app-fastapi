@@ -10,16 +10,14 @@ from pathlib import Path
 from ..config import get_settings
 from ..models import CardOut, Game, SetSummary
 from .image_mapper import resolve_image_url
-from .drop_profiles import (
-    POKEMON_SUPPORTED_SET_IDS,
-    RIFTBOUND_SUPPORTED_SET_IDS,
-)
+from .drop_profiles import POKEMON_SUPPORTED_SET_IDS
 
 
 DB_FILENAMES = {
     "onepiece": "onepiece_cards.sqlite",
     "pokemon": "pokemon_tcg.sqlite",
     "riftbound": "riftbound_tcg.sqlite",
+    "flags": "flags_world.sqlite",
 }
 
 
@@ -119,28 +117,34 @@ def list_sets(
                 ),
             ).fetchall()
 
-        else:
-            placeholders = ",".join(
-                "?"
-                for _ in RIFTBOUND_SUPPORTED_SET_IDS
-            )
+        elif game == "flags":
+            count = conn.execute(
+                "SELECT COUNT(*) FROM flags"
+            ).fetchone()[0]
+            rows = [
+                {
+                    "set_code": "WORLD",
+                    "set_name": "Drapeaux du monde",
+                    "card_count": int(count),
+                }
+            ]
 
+        else:
+            # Pour Riftbound, la liste des boosters supportés vient maintenant
+            # directement du SQLite via booster_rules.
             rows = conn.execute(
-                f"""
+                """
                 SELECT
-                    set_code,
-                    set_name,
-                    card_count
-                FROM sets
-                WHERE card_count > 0
-                  AND set_code IN ({placeholders})
-                ORDER BY set_code
-                """,
-                tuple(
-                    sorted(
-                        RIFTBOUND_SUPPORTED_SET_IDS
-                    )
-                ),
+                    s.set_code,
+                    s.set_name,
+                    s.card_count
+                FROM sets AS s
+                INNER JOIN booster_rules AS b
+                    ON b.set_code = s.set_code
+                WHERE s.card_count > 0
+                  AND b.booster_enabled = 1
+                ORDER BY s.set_code
+                """
             ).fetchall()
 
     return [
@@ -169,6 +173,11 @@ def load_cards(
 
     if game == "pokemon":
         return _load_pokemon_cards(
+            set_code
+        )
+
+    if game == "flags":
+        return _load_flag_cards(
             set_code
         )
 
@@ -625,6 +634,75 @@ def _load_pokemon_cards(
     return cards
 
 
+def _load_flag_cards(
+    set_code: str,
+) -> list[CardOut]:
+    if set_code.upper() != "WORLD":
+        raise ValueError(
+            f"Extension drapeaux inconnue: {set_code}."
+        )
+
+    with connect_catalog("flags") as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                card_key,
+                code,
+                name,
+                subtitle,
+                image_path,
+                proportion,
+                adopted,
+                description,
+                use_text,
+                brief_info,
+                last_modified,
+                source_url
+            FROM flags
+            WHERE image_path != ''
+            ORDER BY name COLLATE NOCASE
+            """
+        ).fetchall()
+
+    cards: list[CardOut] = []
+
+    for row in rows:
+        metadata = {
+            key: str(row[key]).strip()
+            for key in (
+                "subtitle",
+                "proportion",
+                "adopted",
+                "description",
+                "use_text",
+                "brief_info",
+                "last_modified",
+                "source_url",
+            )
+            if str(row[key] or "").strip()
+        }
+
+        cards.append(
+            CardOut(
+                card_key=str(row["card_key"]),
+                game="flags",
+                product_set="WORLD",
+                card_number=str(row["code"]).upper(),
+                name=str(row["name"]),
+                rarity="Drapeau",
+                variant="",
+                drop_class="Drapeau national / territorial",
+                image_url=resolve_image_url(
+                    "flags",
+                    local_paths=(row["image_path"],),
+                ),
+                metadata=metadata or None,
+            )
+        )
+
+    return cards
+
+
 def _load_riftbound_cards(
     set_code: str,
 ) -> list[CardOut]:
@@ -641,6 +719,7 @@ def _load_riftbound_cards(
                 name,
                 rarity_raw,
                 rarity_key,
+                drop_tier,
                 local_image_path,
                 image_full_url,
                 image_url
@@ -703,7 +782,9 @@ def _load_riftbound_cards(
                     row["name"] or ""
                 ),
                 rarity=rarity,
-                drop_class=rarity,
+                # drop_class expose désormais le classement exact du SQLite
+                # (ALT_ART, ALT_RUNE, ULTIMATE, etc.).
+                drop_class=str(row["drop_tier"] or rarity),
                 image_url=image_url,
             )
         )
