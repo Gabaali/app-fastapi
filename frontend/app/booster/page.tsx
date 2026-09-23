@@ -101,6 +101,7 @@ export default function BoosterPage() {
     useState<Game>(
       "onepiece"
     );
+  
 
 
   const [
@@ -117,7 +118,10 @@ export default function BoosterPage() {
     setSetCode,
   ] =
     useState("");
-
+  const [
+      collectionRefreshKey,
+      setCollectionRefreshKey,
+      ] = useState(0);
 
   const [
     balance,
@@ -347,7 +351,7 @@ export default function BoosterPage() {
       setBalance(
         result.balance
       );
-
+      
 
       const returnedCards:
         RevealCard[] =
@@ -664,12 +668,9 @@ export default function BoosterPage() {
           accessToken ? (
             <SetCollectionProgress
               game={game}
-              setCode={
-                setCode
-              }
-              accessToken={
-                accessToken
-              }
+              setCode={setCode}
+              accessToken={accessToken}
+              refreshKey={collectionRefreshKey}
             />
           ) : null}
         </section>
@@ -755,15 +756,15 @@ export default function BoosterPage() {
 
       <BoosterRevealModal
         open={revealOpen}
-        cards={
-          revealCards
-        }
-        setCode={
-          revealSetCode
-        }
+        cards={revealCards}
+        setCode={revealSetCode}
         onClose={() => {
-          setRevealOpen(
-            false
+          setRevealOpen(false);
+
+          // Le booster a déjà été enregistré :
+          // on recharge maintenant la progression.
+          setCollectionRefreshKey(
+            (value) => value + 1
           );
         }}
       />

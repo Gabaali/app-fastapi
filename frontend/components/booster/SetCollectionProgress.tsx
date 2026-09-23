@@ -41,6 +41,7 @@ type Props = {
   game: string;
   setCode: string;
   accessToken?: string | null;
+  refreshKey?: number;
 };
 
 
@@ -48,6 +49,7 @@ export default function SetCollectionProgress({
   game,
   setCode,
   accessToken,
+  refreshKey = 0,
 }: Props) {
   const [
     data,
@@ -128,6 +130,7 @@ export default function SetCollectionProgress({
     game,
     setCode,
     accessToken,
+    refreshKey,
   ]);
 
 
