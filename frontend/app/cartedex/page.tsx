@@ -14,7 +14,11 @@ import {
 } from "@/lib/supabase/client";
 
 import styles from "./Cartedex.module.css";
-
+import {
+  getRiftboundBaseRarity,
+  getRiftboundDropLabel,
+  isSpecialRiftboundEdition,
+} from "@/lib/riftbound-card-display";
 
 type Game =
   | "onepiece"
@@ -68,23 +72,106 @@ const GAME_LABELS:
   };
 
 
-function cardSubtitle(
+function cardRarityLabel(
+  card: CartedexCard,
+) {
+  if (card.game === "riftbound") {
+    return (
+      getRiftboundBaseRarity(card)
+      || card.rarity
+      || "Rareté inconnue"
+    );
+  }
+
+  return (
+    String(card.rarity ?? "").trim()
+    || "Rareté inconnue"
+  );
+}
+
+
+function cardEditionLabel(
+  card: CartedexCard,
+) {
+  if (
+    card.game !== "riftbound"
+    || !isSpecialRiftboundEdition(card)
+  ) {
+    return "";
+  }
+
+  return (
+    getRiftboundDropLabel(card)
+    || ""
+  );
+}
+
+
+function cardCompactLabel(
   card: CartedexCard,
 ) {
   return [
-    card.card_number,
-    card.rarity,
-    card.variant,
+    cardRarityLabel(card),
+    cardEditionLabel(card),
   ]
     .map((value) =>
       String(value ?? "").trim()
     )
-    .filter(
-      (value, index, values) =>
-        value
-        && values.indexOf(value)
-          === index
+    .filter(Boolean)
+    .join(" · ");
+}
+
+
+function cardSubtitle(
+  card: CartedexCard,
+) {
+  const specialRiftboundEdition =
+    card.game === "riftbound"
+    && isSpecialRiftboundEdition(card);
+
+  /*
+   * Pour Riftbound, drop_class est maintenant
+   * la source de vérité pour les éditions
+   * spéciales.
+   *
+   * On évite donc d'afficher un ancien
+   * card.variant contradictoire ou redondant.
+   */
+  const variant =
+    specialRiftboundEdition
+      ? ""
+      : card.variant;
+
+  const values = [
+    card.card_number,
+    cardRarityLabel(card),
+    cardEditionLabel(card),
+    variant,
+  ]
+    .map((value) =>
+      String(value ?? "").trim()
     )
+    .filter(Boolean);
+
+  /*
+   * Suppression des doublons sans tenir
+   * compte des majuscules/minuscules.
+   */
+  const seen =
+    new Set<string>();
+
+  return values
+    .filter((value) => {
+      const key =
+        value.toLocaleLowerCase("fr");
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    })
     .join(" · ");
 }
 
@@ -470,8 +557,7 @@ export default function CartedexPage() {
                           </strong>
 
                           <span>
-                            {card.rarity
-                              || "Rareté inconnue"}
+                            {cardCompactLabel(card)}
                           </span>
                         </div>
                       </div>
