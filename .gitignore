@@ -9,3 +9,10 @@ frontend/.env.local
 backend/data/*.db
 .DS_Store
 Thumbs.db
+apply_flags_r2_patch.py
+README_FLAGS_R2.md
+verify_flags_patch.py
+supabase
+supabase\schema.sql
+backend\data\pokemon_tcg.sqlite-shm
+backend\data\riftbound_tcg.sqlite-wal
