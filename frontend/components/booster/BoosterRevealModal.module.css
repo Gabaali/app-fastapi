@@ -3995,7 +3995,52 @@
 
   letter-spacing: 0.12em;
 }
+.mobileFlagInfo {
+  display: none;
+}
 
+@media (max-width: 768px) {
+  .mobileFlagInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    margin-top: 10px;
+
+    max-width: 100%;
+  }
+
+  .mobileFlagInfo p {
+    margin: 0;
+
+    font-size: 13px;
+    line-height: 1.45;
+
+    opacity: 0.82;
+  }
+
+  .mobileCommonsLink {
+    width: fit-content;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    color: #9cc8ff;
+
+    text-decoration: none;
+
+    padding: 6px 0;
+  }
+
+  .mobileCommonsLink:hover {
+    text-decoration: underline;
+  }
+}
+@media (max-width: 768px) {
+  .flagDescription {
+    display: none;
+  }
+}
 
 .flagBackFallback strong {
   font-size: 56px;

@@ -798,6 +798,35 @@ const cssVars = {
                         : styles.mobileOwnedCard
                     }
                   >
+                    {current.game === "flags" ? (
+                      <div className={styles.mobileFlagInfo}>
+
+                        {current.metadata?.description ? (
+                          <p>
+                            {truncateWords(
+                              current.metadata.description,
+                              35,
+                            )}
+                          </p>
+                        ) : null}
+
+                        {current.metadata?.commons_page ? (
+                          <a
+                            href={
+                              current.metadata.commons_page
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={
+                              styles.mobileCommonsLink
+                            }
+                          >
+                            Voir sur Wikimedia Commons ↗
+                          </a>
+                        ) : null}
+
+                      </div>
+) : null}
                     {current.is_new
                       ? "✦ NOUVELLE CARTE"
                       : "DÉJÀ POSSÉDÉE"}
