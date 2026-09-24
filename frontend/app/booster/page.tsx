@@ -35,7 +35,8 @@ import type {
 type Game =
   | "onepiece"
   | "pokemon"
-  | "riftbound";
+  | "riftbound"
+  | "flags";
 
 
 type SetSummary = {
@@ -58,6 +59,7 @@ type Card = {
   collectible: boolean;
   slot: string | null;
   is_new?: boolean;
+  metadata?: Record<string, string> | null;
 };
 
 
@@ -65,7 +67,12 @@ type Wallet = {
   balance_coins: number;
 };
 
-
+type PassiveClaim = {
+  balance_coins: number;
+  earned_coins: number;
+  ticks: number;
+  next_in_seconds: number;
+};
 type BoosterResult = {
   opening_id: number;
   balance: number;
@@ -81,6 +88,7 @@ const GAME_LABELS: Record<
   onepiece: "One Piece",
   pokemon: "Pokémon",
   riftbound: "Riftbound",
+  flags: "Drapeaux du monde",
 };
 
 
@@ -131,6 +139,10 @@ export default function BoosterPage() {
       null
     );
 
+    const [
+      passiveGain,
+      setPassiveGain,
+    ] = useState<number | null>(null);
 
   const [
     accessToken,
@@ -232,8 +244,13 @@ export default function BoosterPage() {
 
       try {
         const wallet =
-          await apiFetch<Wallet>(
-            "/api/wallet"
+          await apiFetch<
+            PassiveClaim
+          >(
+            "/api/wallet/passive/claim",
+            {
+              method: "POST",
+            }
           );
 
         setBalance(
@@ -309,7 +326,213 @@ export default function BoosterPage() {
   }, [
     game,
   ]);
+  useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
 
+
+    let cancelled = false;
+
+
+    async function claimPassiveCoins() {
+      try {
+        const result =
+          await apiFetch<
+            PassiveClaim
+          >(
+            "/api/wallet/passive/claim",
+            {
+              method: "POST",
+            }
+          );
+
+
+        if (cancelled) {
+          return;
+        }
+
+
+        setBalance(
+          result.balance_coins
+        );
+
+
+        if (
+          result.earned_coins > 0
+        ) {
+          console.log(
+            `+${result.earned_coins} pièces passives`
+          );
+        }
+
+      } catch (err) {
+        /*
+        * On ne bloque pas l'application
+        * si le générateur rencontre
+        * temporairement une erreur réseau.
+        */
+        console.warn(
+          "Générateur passif indisponible",
+          err
+        );
+      }
+    }
+
+
+  const interval =
+    window.setInterval(
+      () => {
+        /*
+         * Inutile de faire des requêtes
+         * lorsque l'onglet est caché.
+         *
+         * Le serveur calculera le temps
+         * écoulé lorsqu'on reviendra.
+         */
+        if (
+          document.visibilityState
+          === "visible"
+        ) {
+          void claimPassiveCoins();
+        }
+      },
+      10_000
+    );
+    
+
+  /*
+   * Si le joueur revient sur l'onglet
+   * après plusieurs minutes/heures,
+   * récupération immédiate.
+   */
+  function handleVisibility() {
+    if (
+      document.visibilityState
+      === "visible"
+    ) {
+      void claimPassiveCoins();
+    }
+  }
+
+
+  document.addEventListener(
+    "visibilitychange",
+    handleVisibility
+  );
+
+
+  return () => {
+    cancelled = true;
+
+    window.clearInterval(
+      interval
+    );
+
+    document.removeEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
+  };
+
+}, [
+  accessToken,
+]);
+useEffect(() => {
+  if (!accessToken) {
+    return;
+  }
+
+  let cancelled = false;
+  let gainTimeout:
+    ReturnType<typeof setTimeout>
+    | null = null;
+
+  async function refreshPassiveWallet() {
+    try {
+      const result =
+        await apiFetch<PassiveClaim>(
+          "/api/wallet/passive/claim",
+          {
+            method: "POST",
+          }
+        );
+
+      if (cancelled) {
+        return;
+      }
+
+      /*
+       * Le solde affiché est remplacé
+       * par la vraie valeur Supabase.
+       */
+      setBalance(
+        result.balance_coins
+      );
+
+      /*
+       * Affiche temporairement le gain.
+       */
+      if (
+        result.earned_coins > 0
+      ) {
+        setPassiveGain(
+          result.earned_coins
+        );
+
+        if (gainTimeout) {
+          clearTimeout(
+            gainTimeout
+          );
+        }
+
+        gainTimeout =
+          setTimeout(() => {
+            setPassiveGain(null);
+          }, 1800);
+      }
+
+    } catch (error) {
+      console.warn(
+        "Impossible d'actualiser le wallet passif",
+        error
+      );
+    }
+  }
+
+  /*
+   * On synchronise immédiatement
+   * au chargement de la page.
+   */
+  void refreshPassiveWallet();
+
+  /*
+   * Puis toutes les 10 secondes.
+   */
+  const interval =
+    window.setInterval(
+      () => {
+        void refreshPassiveWallet();
+      },
+      10_000
+    );
+
+  return () => {
+    cancelled = true;
+
+    window.clearInterval(
+      interval
+    );
+
+    if (gainTimeout) {
+      clearTimeout(
+        gainTimeout
+      );
+    }
+  };
+}, [
+  accessToken,
+]);
 
   /*
    * Achat + génération du booster.
@@ -394,6 +617,10 @@ export default function BoosterPage() {
 
             _slot:
               card.slot,
+
+            metadata:
+              card.metadata ??
+              null,
           })
         );
 

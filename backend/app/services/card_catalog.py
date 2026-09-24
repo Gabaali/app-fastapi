@@ -646,62 +646,88 @@ def _load_flag_cards(
         rows = conn.execute(
             """
             SELECT
-                card_key,
-                code,
+                id,
                 name,
-                subtitle,
-                image_path,
-                proportion,
-                adopted,
                 description,
-                use_text,
-                brief_info,
-                last_modified,
-                source_url
+                commons_page,
+                rarity,
+                rarity_rank,
+                rarity_score,
+                drop_rate,
+                item_drop_rate
             FROM flags
-            WHERE image_path != ''
-            ORDER BY name COLLATE NOCASE
+            ORDER BY rarity_rank, name COLLATE NOCASE
             """
         ).fetchall()
 
     cards: list[CardOut] = []
 
     for row in rows:
+        source_id = str(row["id"])
+        rarity = str(row["rarity"] or "Commun").strip()
+
         metadata = {
-            key: str(row[key]).strip()
-            for key in (
-                "subtitle",
-                "proportion",
-                "adopted",
-                "description",
-                "use_text",
-                "brief_info",
-                "last_modified",
-                "source_url",
-            )
-            if str(row[key] or "").strip()
+            "description": str(
+                row["description"] or ""
+            ).strip(),
+
+            "commons_page": str(
+                row["commons_page"] or ""
+            ).strip(),
+
+            "rarity_rank": str(
+                row["rarity_rank"] or ""
+            ),
+
+            "rarity_score": str(
+                row["rarity_score"] or ""
+            ),
+
+            "drop_rate": str(
+                row["drop_rate"] or ""
+            ),
         }
 
         cards.append(
             CardOut(
-                card_key=str(row["card_key"]),
-                game="flags",
-                product_set="WORLD",
-                card_number=str(row["code"]).upper(),
-                name=str(row["name"]),
-                rarity="Drapeau",
-                variant="",
-                drop_class="Drapeau national / territorial",
-                image_url=resolve_image_url(
+                card_key=_stable_hash(
                     "flags",
-                    local_paths=(row["image_path"],),
+                    source_id,
                 ),
-                metadata=metadata or None,
+
+                game="flags",
+
+                product_set="WORLD",
+
+                card_number=source_id,
+
+                name=str(
+                    row["name"]
+                ),
+
+                rarity=str(
+                    row["rarity"]
+                ),
+
+                variant="",
+
+                drop_class=str(
+                    row["rarity"]
+                ),
+
+                image_url=
+                    resolve_image_url(
+                        "flags",
+                        local_paths=(
+                            f"{source_id}.svg",
+                        ),
+                    ),
+
+                metadata=metadata,
             )
         )
 
     return cards
-
 
 def _load_riftbound_cards(
     set_code: str,

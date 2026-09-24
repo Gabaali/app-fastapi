@@ -25,9 +25,71 @@ def get_wallet_balance(user_id: str) -> int:
 
     return int(response.data["balance_coins"])
 
+def claim_passive_income(
+    user_id: str,
+) -> dict:
 
-def get_booster_price(game: str, set_code: str) -> int:
-    return int(get_settings().default_booster_price_coins)
+    try:
+        response = (
+            get_supabase_admin()
+            .rpc(
+                "claim_passive_coins",
+                {
+                    "p_user_id":
+                        user_id,
+                },
+            )
+            .execute()
+        )
+
+    except Exception as exc:
+        message = str(exc)
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Erreur générateur "
+                f"passif: {message}"
+            ),
+        ) from exc
+
+
+    data = response.data
+
+
+    if (
+        isinstance(data, list)
+        and len(data) == 1
+    ):
+        data = data[0]
+
+
+    if not isinstance(
+        data,
+        dict,
+    ):
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Réponse inattendue "
+                "du générateur passif."
+            ),
+        )
+
+
+    return data
+def get_booster_price(
+    game: str,
+    set_code: str,
+) -> int:
+
+    if game == "flags":
+        return 400
+
+    return int(
+        get_settings()
+        .default_booster_price_coins
+    )
 
 
 def persist_booster_opening(

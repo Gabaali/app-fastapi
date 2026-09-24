@@ -67,6 +67,14 @@ export function rarityRank(card: RevealCard): number {
   const text = cardText(card);
 
   if (game === "flags") {
+    if (text.includes("legendaire")) return 100;
+    if (text.includes("ultra")) return 90;
+    if (text.includes("mythique")) return 80;
+    if (text.includes("epique")) return 70;
+    if (text.includes("super rare")) return 60;
+    if (text.includes("rare")) return 50;
+    if (text.includes("peu commun")) return 20;
+    if (text.includes("commun")) return 10;
     return 30;
   }
 
@@ -169,15 +177,25 @@ function baseProfile(card: RevealCard) {
   }
 
   if (game === "flags") {
-    return {
-      name: "soft",
-      label: "DRAPEAU",
-      primary: "#3b82f6",
-      secondary: "#22c55e",
-      accent: "#ffffff",
-      baseDuration: 800,
-      flash: false,
-    };
+    if (text.includes("legendaire")) {
+      return { name: "legendary", label: "LÉGENDAIRE", primary: "#fde68a", secondary: "#f59e0b", accent: "#ffffff", baseDuration: 1500, flash: true };
+    }
+    if (text.includes("ultra")) {
+      return { name: "gold", label: "ULTRA", primary: "#fef08a", secondary: "#eab308", accent: "#ffffff", baseDuration: 1380, flash: true };
+    }
+    if (text.includes("mythique")) {
+      return { name: "prism", label: "MYTHIQUE", primary: "#f472b6", secondary: "#8b5cf6", accent: "#ffffff", baseDuration: 1260, flash: true };
+    }
+    if (text.includes("epique")) {
+      return { name: "neon", label: "ÉPIQUE", primary: "#c084fc", secondary: "#7c3aed", accent: "#ffffff", baseDuration: 1120, flash: false };
+    }
+    if (text.includes("super rare")) {
+      return { name: "energy", label: "SUPER RARE", primary: "#38bdf8", secondary: "#2563eb", accent: "#ffffff", baseDuration: 980, flash: false };
+    }
+    if (text.includes("rare")) {
+      return { name: "silver", label: "RARE", primary: "#dbeafe", secondary: "#60a5fa", accent: "#ffffff", baseDuration: 850, flash: false };
+    }
+    return { name: "soft", label: "", primary: "#94a3b8", secondary: "#64748b", accent: "#ffffff", baseDuration: 650, flash: false };
   }
 
   if (game === "onepiece") {

@@ -1,5 +1,6 @@
 "use client";
 
+
 import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
@@ -48,7 +49,25 @@ function cardDetails(card: RevealCard) {
     .filter((value, index, values) => value && values.indexOf(value) === index)
     .join(" · ");
 }
+function truncateWords(
+  text: string,
+  maxWords = 100,
+) {
+  const words = text
+    .trim()
+    .split(/\s+/);
 
+  if (words.length <= maxWords) {
+    return text.trim();
+  }
+
+  return (
+    words
+      .slice(0, maxWords)
+      .join(" ")
+    + "…"
+  );
+}
 export default function BoosterRevealModal({
   open,
   cards,
@@ -466,6 +485,34 @@ const cssVars = {
             {revealed && profile.label ? (
               <div className={styles.rarityBadge}>{profile.label}</div>
             ) : null}
+            {revealed &&
+            current.game === "flags" ? (
+              <div className={styles.flagDescription}>
+                {current.metadata?.description ? (
+                  <p>
+                    {truncateWords(
+                      current.metadata.description,
+                      100,
+                    )}
+                  </p>
+                ) : null}
+
+                {current.metadata?.commons_page ? (
+                  <a
+                    href={
+                      current.metadata.commons_page
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={
+                      styles.commonsLink
+                    }
+                  >
+                    Voir sur Wikimedia Commons ↗
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             {revealed ? (
               <div
                 className={
@@ -516,6 +563,10 @@ const cssVars = {
               key={cardId(current, index)}
               ref={tiltRef}
               className={`${styles.tiltFrame} ${
+                current.game === "flags"
+                  ? styles.flagTiltFrame
+                  : ""
+              } ${
                 teaserActive && !revealed
                   ? styles.cardHiddenDuringBuild
                   : ""
@@ -528,14 +579,87 @@ const cssVars = {
               onPointerLeave={resetTilt}
             >
               <div
-                className={styles.cardButton}
+                className={`${styles.cardButton} ${
+                  current.game === "flags"
+                    ? styles.flagCardButton
+                    : ""
+                }`}
                 aria-label={
                   revealed
                     ? current.name
                     : "Révélation automatique de la carte"
                 }
               >
-                {hasTeaserReveal ? (
+                {current.game === "flags"
+                && profile.rank <= 20 ? (
+
+                  /*
+                  * DRAPEAUX COMMUNS / PEU COMMUNS
+                  * apparition simple
+                  */
+                  <div
+                    className={`${styles.flagRevealCard} ${
+                      revealing || revealed
+                        ? styles.flagRevealCardVisible
+                        : ""
+                    }`}
+                  >
+                    <CardArtwork
+                      card={current}
+                    />
+                  </div>
+
+                ) : current.game === "flags" ? (
+
+                  /*
+                  * DRAPEAUX RARE+
+                  * flip horizontal
+                  */
+                  <div
+                    className={`${styles.flagCard3d} ${
+                      revealing || revealed
+                        ? styles.flagCardFlipped
+                        : ""
+                    }`}
+                  >
+                    <div
+                      className={`${styles.flagCardFace} ${styles.flagCardBack}`}
+                    >
+                      {getCardBack("flags") ? (
+                        <img
+                          src={
+                            getCardBack("flags")!
+                          }
+                          alt=""
+                          draggable={false}
+                        />
+                      ) : (
+                        <div
+                          className={
+                            styles.flagBackFallback
+                          }
+                        >
+                          <span>
+                            WORLD FLAGS
+                          </span>
+
+                          <strong>
+                            ?
+                          </strong>
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      className={`${styles.flagCardFace} ${styles.flagCardFront}`}
+                    >
+                      <CardArtwork
+                        card={current}
+                      />
+                    </div>
+                  </div>
+
+                ) : hasTeaserReveal ? (
                   /* ======================================
                     GROS HIT :
                     PAS DE DOS, PAS DE FLIP
@@ -708,7 +832,57 @@ const cssVars = {
     </div>
   );
 }
+function FlagResponsiveArt({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const [ratio, setRatio] =
+    useState<number>(1.5); // fallback 3:2
 
+  return (
+    <div
+      className={styles.flagResponsiveArt}
+      style={{
+        aspectRatio: String(ratio),
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        onLoad={(event) => {
+          const img =
+            event.currentTarget;
+
+          const width =
+            img.naturalWidth || 3;
+
+          const height =
+            img.naturalHeight || 2;
+
+          const rawRatio =
+            width / height;
+
+          /*
+           * On borne un peu le ratio pour éviter
+           * les formats trop extrêmes dans l'UI.
+           */
+          const clampedRatio =
+            Math.max(
+              1.0,
+              Math.min(2.1, rawRatio)
+            );
+
+          setRatio(clampedRatio);
+        }}
+      />
+    </div>
+  );
+}
 function PackIntro({
   game,
   gameKey,
@@ -1436,22 +1610,58 @@ function Particles({ profile }: { profile: RevealProfile }) {
   );
 }
 
-function CardArtwork({ card }: { card: RevealCard }) {
-  const source = card.image_url || card.image || "";
+function CardArtwork({
+  card,
+}: {
+  card: RevealCard;
+}) {
+  const source =
+    card.image_url
+    || card.image
+    || "";
 
   if (!source) {
     return (
-      <div className={styles.missingArtwork}>
+      <div
+        className={
+          styles.missingArtwork
+        }
+      >
         <span>TCG</span>
-        <strong>{card.name}</strong>
+        <strong>
+          {card.name}
+        </strong>
       </div>
     );
   }
 
+  /*
+   * Les drapeaux ont leur propre
+   * ratio d'affichage.
+   */
+  if (card.game === "flags") {
+    return (
+      <FlagResponsiveArt
+        src={source}
+        alt={card.name}
+      />
+    );
+  }
+
+  /*
+   * Les cartes classiques gardent
+   * leur affichage actuel.
+   */
   return (
-    // Les URLs R2 sont déjà optimisées et n'ont pas besoin de next/image ici.
     // eslint-disable-next-line @next/next/no-img-element
-    <img className={styles.cardImage} src={source} alt={card.name} draggable={false} />
+    <img
+      className={
+        styles.cardImage
+      }
+      src={source}
+      alt={card.name}
+      draggable={false}
+    />
   );
 }
 

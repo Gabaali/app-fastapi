@@ -354,7 +354,50 @@
   font-size: .92rem;
   line-height: 1.65;
 }
+.flagDescription {
+  margin-top: 10px;
 
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  max-width: 520px;
+}
+
+.flagDescription p {
+  margin: 0;
+
+  font-size: 14px;
+  line-height: 1.5;
+
+  opacity: 0.86;
+}
+
+.commonsLink {
+  width: fit-content;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-decoration: none;
+
+  color: #9cc8ff;
+
+  opacity: 0.9;
+
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.commonsLink:hover {
+  opacity: 1;
+
+  transform:
+    translateX(2px);
+
+  text-decoration: underline;
+}
 .rarityBadge {
   display: inline-flex;
   margin-top: 24px;
@@ -1772,6 +1815,20 @@
   mask-image:
     radial-gradient(circle, transparent 0 17%, black 35%, transparent 78%);
   animation: novaRays 1450ms cubic-bezier(.15,.65,.2,1) both;
+}
+.flagTiltFrame {
+  width: min(78vw, 760px);
+
+  height: auto;
+  min-height: 0;
+
+  aspect-ratio: auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: auto;
 }
 
 .particleLayer {
@@ -3683,8 +3740,87 @@
 
   font-size: 14px;
 }
+.flagCardButton {
+  width: 100%;
 
+  height: auto;
+  min-height: 0;
 
+  aspect-ratio: auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flagRevealCard {
+  position: relative;
+
+  width: 100%;
+
+  height: auto;
+  min-height: 0;
+
+  aspect-ratio: auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0;
+
+  transform:
+    scale(0.96)
+    translateY(8px);
+
+  transition:
+    opacity 300ms ease,
+    transform 420ms ease;
+}
+
+.flagRevealCardVisible {
+  opacity: 1;
+
+  transform:
+    scale(1)
+    translateY(0);
+}
+
+.flagResponsiveArt {
+  width: 100%;
+
+  height: auto;
+  min-height: 0;
+
+  margin: auto;
+
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 18px;
+
+  background:
+    rgba(8, 10, 18, 0.98);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.18);
+
+  box-shadow:
+    0 22px 60px
+      rgba(0, 0, 0, 0.5);
+}
+
+.flagResponsiveArt img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+}
 .simplePackInstruction span {
   color:
     rgba(
@@ -3727,7 +3863,143 @@
   background:
     #121826;
 }
+.flagCard3d {
+  position: relative;
 
+  width: min(76vw, 720px);
+
+  aspect-ratio: 1.5 / 1;
+
+  transform-style: preserve-3d;
+
+  transform:
+    rotateY(180deg);
+
+  transition:
+    transform 700ms
+    cubic-bezier(
+      0.2,
+      0.75,
+      0.25,
+      1
+    );
+}
+
+
+.flagCardFlipped {
+  transform:
+    rotateY(0deg);
+}
+
+
+.flagCardFace {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  backface-visibility:
+    hidden;
+
+  -webkit-backface-visibility:
+    hidden;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+}
+
+
+.flagCardBack {
+  transform:
+    rotateY(180deg);
+
+  background:
+    linear-gradient(
+      145deg,
+      #131827,
+      #070911
+    );
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.18
+    );
+}
+
+
+.flagCardBack img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+
+.flagCardFront {
+  transform:
+    rotateY(0deg);
+
+  background:
+    transparent;
+}
+
+
+.flagCardFront
+.flagResponsiveArt {
+  width: 100%;
+  height: 100%;
+
+  max-width: none;
+
+  border-radius: 18px;
+
+  box-shadow: none;
+}
+
+
+.flagCardFront
+.flagResponsiveArt img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+}
+
+
+.flagBackFallback {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 12px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+}
+
+
+.flagBackFallback strong {
+  font-size: 56px;
+}
 
 /* =========================================
    MOBILE

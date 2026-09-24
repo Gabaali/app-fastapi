@@ -10,6 +10,7 @@ GAME_PREFIXES = {
     "onepiece": "onepiece",
     "pokemon": "pokemon",
     "riftbound": "riftbound",
+    "flags": "flags",
 }
 
 

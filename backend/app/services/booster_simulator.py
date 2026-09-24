@@ -863,32 +863,136 @@ def _simulate_riftbound(set_code: str) -> list[CardOut]:
 # DRAPEAUX DU MONDE
 # ============================================================
 
-FLAGS_CARDS_PER_PACK = 5
+FLAGS_CARDS_PER_PACK = 10
+
+
+def _flag_rarity_config() -> list[dict]:
+    with connect_catalog("flags") as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                rarity,
+                rarity_rank,
+                guaranteed_slots,
+                rare_slot_rate,
+                wildcard_rate,
+                drop_rate
+            FROM rarity_config
+            ORDER BY rarity_rank
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+def _flag_pools(
+    cards: list[CardOut],
+) -> dict[str, list[CardOut]]:
+    pools: dict[str, list[CardOut]] = defaultdict(list)
+    for card in cards:
+        pools[str(card.rarity or card.drop_class or "").strip()].append(card)
+    return pools
+
+
+def _flag_weighted_draw(
+    pools: dict[str, list[CardOut]],
+    config: list[dict],
+    rate_column: str,
+    used: set[str],
+    slot: str,
+) -> CardOut | None:
+    # Rare+ uniquement : rarity_rank >= 3.
+    candidates: list[tuple[str, float]] = []
+    for row in config:
+        rarity = str(row.get("rarity") or "").strip()
+        rank = int(row.get("rarity_rank") or 0)
+        weight = float(row.get(rate_column) or 0.0)
+        if rank >= 3 and weight > 0 and pools.get(rarity):
+            candidates.append((rarity, weight))
+
+    if not candidates:
+        return None
+
+    rarity = random.choices(
+        [name for name, _ in candidates],
+        weights=[weight for _, weight in candidates],
+        k=1,
+    )[0]
+
+    return _with_slot(
+        _draw(pools[rarity], used),
+        slot,
+    )
 
 
 def _simulate_flags(set_code: str) -> list[CardOut]:
     cards = load_cards("flags", set_code)
-
     if not cards:
         raise ValueError(
             f"Aucun drapeau pour flags/{set_code}."
         )
 
-    if len(cards) <= FLAGS_CARDS_PER_PACK:
-        selected = list(cards)
-    else:
-        selected = random.sample(
-            cards,
-            FLAGS_CARDS_PER_PACK,
+    config = _flag_rarity_config()
+    pools = _flag_pools(cards)
+    common = pools.get("Commun", [])
+    uncommon = pools.get("Peu commun", [])
+
+    if not common:
+        raise ValueError("Aucun drapeau Commun dans flags_world.sqlite.")
+    if not uncommon:
+        raise ValueError("Aucun drapeau Peu commun dans flags_world.sqlite.")
+
+    used: set[str] = set()
+    pack: list[CardOut] = []
+
+    # 6 Communes garanties.
+    for _ in range(6):
+        card = _with_slot(
+            _draw(common, used),
+            "Commun",
+        )
+        if card:
+            pack.append(card)
+
+    # 2 Peu communes garanties.
+    for _ in range(2):
+        card = _with_slot(
+            _draw(uncommon, used),
+            "Peu commun",
+        )
+        if card:
+            pack.append(card)
+
+    # 1 Rare ou mieux. rare_slot_rate somme déjà à 100 % sur les Rare+.
+    rare_plus = _flag_weighted_draw(
+        pools,
+        config,
+        "rare_slot_rate",
+        used,
+        "Rare ou mieux",
+    )
+    if rare_plus:
+        pack.append(rare_plus)
+
+    # 1 Joker, LUI AUSSI obligatoirement Rare+.
+    # wildcard_rate est normalisé automatiquement après exclusion de Commun/Peu commun.
+    joker = _flag_weighted_draw(
+        pools,
+        config,
+        "wildcard_rate",
+        used,
+        "Joker Rare+",
+    )
+    if joker:
+        pack.append(joker)
+
+    if len(pack) != FLAGS_CARDS_PER_PACK:
+        raise ValueError(
+            "Impossible de construire un booster Drapeaux complet : "
+            f"{len(pack)}/{FLAGS_CARDS_PER_PACK} cartes."
         )
 
-    return [
-        card.model_copy(
-            update={"slot": "Drapeau"}
-        )
-        for card in selected
-    ]
-
+    return pack
 
 # ============================================================
 # PUBLIC ENTRY POINT

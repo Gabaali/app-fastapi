@@ -23,7 +23,8 @@ import {
 type Game =
   | "onepiece"
   | "pokemon"
-  | "riftbound";
+  | "riftbound"
+  | "flags";
 
 type SetSummary = {
   set_code: string;
@@ -69,6 +70,7 @@ const GAME_LABELS:
     onepiece: "One Piece",
     pokemon: "Pokémon",
     riftbound: "Riftbound",
+    flags: "Drapeaux du monde",
   };
 
 
@@ -89,7 +91,48 @@ function cardRarityLabel(
   );
 }
 
+function FlagThumb({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const [ratio, setRatio] =
+    useState<number>(1.5);
 
+  return (
+    <div
+      className={styles.flagThumb}
+      style={{
+        aspectRatio: String(ratio),
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        onLoad={(event) => {
+          const img =
+            event.currentTarget;
+
+          const rawRatio =
+            (img.naturalWidth || 3) /
+            (img.naturalHeight || 2);
+
+          const clampedRatio =
+            Math.max(
+              0.8,
+              Math.min(2.2, rawRatio)
+            );
+
+          setRatio(clampedRatio);
+        }}
+      />
+    </div>
+  );
+}
 function cardEditionLabel(
   card: CartedexCard,
 ) {
@@ -525,14 +568,25 @@ export default function CartedexPage() {
                   >
                     {card.owned
                     && card.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={
-                          card.image_url
-                        }
-                        alt={card.name}
-                        draggable={false}
-                      />
+
+                      card.game === "flags" ? (
+
+                        <FlagThumb
+                          src={card.image_url}
+                          alt={card.name}
+                        />
+
+                      ) : (
+
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={card.image_url}
+                          alt={card.name}
+                          draggable={false}
+                        />
+
+                      )
+
                     ) : (
                       <div
                         className={

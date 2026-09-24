@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-Game = Literal["onepiece", "pokemon", "riftbound"]
+Game = Literal["onepiece", "pokemon", "riftbound", "flags"]
 
 
 class SetSummary(BaseModel):
@@ -25,6 +25,7 @@ class CardOut(BaseModel):
     collectible: bool = True
     slot: str | None = None
     is_new: bool = False
+    metadata: dict[str, str] | None = None
 
 
 class BoosterOpenRequest(BaseModel):
@@ -42,7 +43,11 @@ class BoosterOpenResponse(BaseModel):
 class WalletOut(BaseModel):
     balance_coins: int
 
-
+class PassiveCoinsOut(BaseModel):
+    balance_coins: int
+    earned_coins: int
+    ticks: int
+    next_in_seconds: int
 class QuizQuestionOut(BaseModel):
     id: str
     type: Literal["qcm", "direct"]
