@@ -44,10 +44,54 @@ function deterministic(index: number, salt: number) {
 }
 
 function cardDetails(card: RevealCard) {
+  if (card.game === "movies") {
+    return [card.metadata?.year, card.rarity].filter(Boolean).join(" · ");
+  }
   return [card.card_number, card.rarity, card.variant, card.drop_class]
     .map((value) => String(value ?? "").trim())
     .filter((value, index, values) => value && values.indexOf(value) === index)
     .join(" · ");
+}
+function MovieInfo({ card }: { card: RevealCard }) {
+  if (card.game !== "movies") return null;
+
+  let awards: Array<{ name: string; year?: number }> = [];
+  try {
+    const parsed: unknown = JSON.parse(card.metadata?.awards_json || "[]");
+    if (Array.isArray(parsed)) {
+      awards = parsed.filter(
+        (award): award is { name: string; year?: number } =>
+          !!award && typeof award.name === "string" &&
+          (award.year == null || typeof award.year === "number")
+      );
+    }
+  } catch {
+    // Les anciennes ouvertures peuvent ne pas contenir le détail des prix.
+  }
+  const count = Number(card.metadata?.awards_count) || awards.length;
+
+  return (
+    <div className={styles.movieInfo}>
+      <p>Réalisation : {card.metadata?.director || "Non renseignée"}</p>
+        <details key={card.card_key || card.name}>
+          <summary>Description et récompenses ({count})</summary>
+          <div className={styles.movieDescription}>
+            <p>{card.metadata?.synopsis || "Description non renseignée."}</p>
+          </div>
+          {awards.length ? (
+          <ul>
+            {awards.map((award, index) => (
+              <li key={`${award.name}-${award.year}-${index}`}>
+                {award.name}{award.year ? ` (${award.year})` : ""}
+              </li>
+            ))}
+          </ul>
+          ) : (
+        <p>{count > 0 ? `${count} récompense${count > 1 ? "s" : ""} répertoriée${count > 1 ? "s" : ""}` : "Aucune récompense répertoriée"}</p>
+          )}
+        </details>
+    </div>
+  );
 }
 function truncateWords(
   text: string,
@@ -481,6 +525,7 @@ const cssVars = {
             <p className={styles.cardDetails}>
               {revealed ? cardDetails(current) || "Carte du booster" : suspense ? "Suspense..." : "Révélation en cours..."}
             </p>
+            {revealed ? <MovieInfo card={current} /> : null}
 
             {revealed && profile.label ? (
               <div className={styles.rarityBadge}>{profile.label}</div>
@@ -562,7 +607,7 @@ const cssVars = {
             <div
               key={cardId(current, index)}
               ref={tiltRef}
-              className={`${styles.tiltFrame} ${
+              className={`${styles.tiltFrame} ${current.game === "movies" ? styles.moviePoster : ""} ${
                 current.game === "flags"
                   ? styles.flagTiltFrame
                   : ""
@@ -790,6 +835,7 @@ const cssVars = {
                   <span>
                     {cardDetails(current)}
                   </span>
+                  <MovieInfo card={current} />
 
                   <div
                     className={

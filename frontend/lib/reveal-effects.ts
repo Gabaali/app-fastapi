@@ -1,4 +1,4 @@
-export type GameKey = "onepiece" | "pokemon" | "riftbound" | "flags";
+export type GameKey = "onepiece" | "pokemon" | "riftbound" | "flags" | "movies";
 
 export type RevealCard = {
   card_key?: string;
@@ -65,6 +65,59 @@ function isAltRune(card: RevealCard) {
 export function rarityRank(card: RevealCard): number {
   const game = card.game;
   const text = cardText(card);
+
+  if (game === "movies") {
+    // Les libelles de slots regroupent plusieurs raretes.
+    const movieText = cleanText(
+      [card.rarity, card.variant, card.drop_class].join(" ")
+    ).replace(/_/g, " ");
+
+    if (
+      movieText.includes("legendaire showcase")
+    ) return 100;
+
+    if (
+      movieText.includes("legendaire alt")
+    ) return 96;
+
+    if (
+      movieText.includes("legendaire")
+    ) return 92;
+
+    if (
+      movieText.includes("mythique showcase")
+    ) return 90;
+
+    if (
+      movieText.includes("mythique alt")
+    ) return 86;
+
+    if (
+      movieText.includes("mythique")
+    ) return 80;
+
+    if (movieText.includes("epique")) {
+      return 70;
+    }
+
+    if (
+      movieText.includes("super rare")
+    ) return 60;
+
+    if (movieText.includes("rare")) {
+      return 50;
+    }
+
+    if (
+      movieText.includes("peu commun")
+    ) return 20;
+
+    if (movieText.includes("commun")) {
+      return 10;
+    }
+
+    return 30;
+  }
 
   if (game === "flags") {
     if (text.includes("legendaire")) return 100;
@@ -269,6 +322,103 @@ function baseProfile(card: RevealCard) {
     return { name: "soft", label: "", primary: "#5aa9e6", secondary: "#4361ee", accent: "#ffffff", baseDuration: 760, flash: false };
   }
 
+  if (game === "movies") {
+    // Les libelles de slots regroupent plusieurs raretes.
+    const movieText = cleanText(
+      [card.rarity, card.variant, card.drop_class].join(" ")
+    ).replace(/_/g, " ");
+
+    if (
+      movieText.includes("legendaire showcase")
+    ) {
+      return {
+        name: "legendary",
+        label: "LÉGENDAIRE SHOWCASE",
+        primary: "#fef3c7",
+        secondary: "#f59e0b",
+        accent: "#ffffff",
+        baseDuration: 1550,
+        flash: true,
+      };
+    }
+
+    if (movieText.includes("legendaire")) {
+      return {
+        name: "gold",
+        label: movieText.includes("alt")
+          ? "LÉGENDAIRE ALT"
+          : "LÉGENDAIRE",
+        primary: "#fde68a",
+        secondary: "#d97706",
+        accent: "#ffffff",
+        baseDuration: 1400,
+        flash: true,
+      };
+    }
+
+    if (movieText.includes("mythique")) {
+      return {
+        name: "prism",
+        label: movieText.includes("showcase")
+          ? "MYTHIQUE SHOWCASE"
+          : movieText.includes("alt")
+            ? "MYTHIQUE ALT"
+            : "MYTHIQUE",
+        primary: "#f472b6",
+        secondary: "#8b5cf6",
+        accent: "#ffffff",
+        baseDuration: 1250,
+        flash: true,
+      };
+    }
+
+    if (movieText.includes("epique")) {
+      return {
+        name: "neon",
+        label: "ÉPIQUE",
+        primary: "#c084fc",
+        secondary: "#7c3aed",
+        accent: "#ffffff",
+        baseDuration: 1100,
+        flash: false,
+      };
+    }
+
+    if (movieText.includes("super rare")) {
+      return {
+        name: "energy",
+        label: "SUPER RARE",
+        primary: "#38bdf8",
+        secondary: "#2563eb",
+        accent: "#ffffff",
+        baseDuration: 980,
+        flash: false,
+      };
+    }
+
+    if (movieText.includes("rare")) {
+      return {
+        name: "silver",
+        label: "RARE",
+        primary: "#dbeafe",
+        secondary: "#64748b",
+        accent: "#ffffff",
+        baseDuration: 850,
+        flash: false,
+      };
+    }
+
+    return {
+      name: "soft",
+      label: "",
+      primary: "#94a3b8",
+      secondary: "#475569",
+      accent: "#ffffff",
+      baseDuration: 650,
+      flash: false,
+    };
+  }
+
   if (isAltRune(card)) {
     return { name: "prism", label: "ALT RUNE", primary: "#62f6ff", secondary: "#8b5cf6", accent: "#fff4a3", baseDuration: 1280, flash: true };
   }
@@ -358,5 +508,6 @@ export function gameLabel(game: GameKey) {
   if (game === "onepiece") return "ONE PIECE";
   if (game === "pokemon") return "POKÉMON";
   if (game === "flags") return "DRAPEAUX DU MONDE";
+  if (game === "movies") return "CINÉMA";
   return "RIFTBOUND";
 }

@@ -11,6 +11,7 @@ GAME_PREFIXES = {
     "pokemon": "pokemon",
     "riftbound": "riftbound",
     "flags": "flags",
+    "movies": "poster",
 }
 
 
@@ -47,6 +48,14 @@ def _r2_relative_path(
     # Riftbound
     if game == "riftbound":
         prefix = "riftbound_images/"
+
+        if lower.startswith(prefix):
+            return value[len(prefix):]
+
+        return value
+
+    if game == "movies":
+        prefix = "posters/"
 
         if lower.startswith(prefix):
             return value[len(prefix):]

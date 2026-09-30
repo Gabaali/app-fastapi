@@ -24,7 +24,8 @@ type Game =
   | "onepiece"
   | "pokemon"
   | "riftbound"
-  | "flags";
+  | "flags"
+  | "movies";
 
 type SetSummary = {
   set_code: string;
@@ -71,6 +72,7 @@ const GAME_LABELS:
     pokemon: "Pokémon",
     riftbound: "Riftbound",
     flags: "Drapeaux du monde",
+    movies: "Cinéma",
   };
 
 

@@ -18,6 +18,7 @@ DB_FILENAMES = {
     "pokemon": "pokemon_tcg.sqlite",
     "riftbound": "riftbound_tcg.sqlite",
     "flags": "flags_world.sqlite",
+    "movies": "movies_tcg.sqlite",
 }
 
 
@@ -129,6 +130,18 @@ def list_sets(
                 }
             ]
 
+        elif game == "movies":
+            count = conn.execute(
+                "SELECT COUNT(*) FROM cards"
+            ).fetchone()[0]
+            rows = [
+                {
+                    "set_code": "CINEMA",
+                    "set_name": "Cinéma",
+                    "card_count": int(count),
+                }
+            ]
+
         else:
             # Pour Riftbound, la liste des boosters supportés vient maintenant
             # directement du SQLite via booster_rules.
@@ -180,6 +193,9 @@ def load_cards(
         return _load_flag_cards(
             set_code
         )
+
+    if game == "movies":
+        return _load_movie_cards(set_code)
 
     return _load_riftbound_cards(
         set_code
@@ -812,6 +828,117 @@ def _load_riftbound_cards(
                 # (ALT_ART, ALT_RUNE, ULTIMATE, etc.).
                 drop_class=str(row["drop_tier"] or rarity),
                 image_url=image_url,
+            )
+        )
+
+    return cards
+
+
+def _load_movie_cards(
+    set_code: str,
+) -> list[CardOut]:
+    if set_code.upper() != "CINEMA":
+        raise ValueError(
+            f"Extension cinéma inconnue: {set_code}."
+        )
+
+    with connect_catalog("movies") as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                c.card_id,
+                c.tmdb_id,
+                c.variant,
+                c.rarity,
+                c.rarity_label,
+                c.image_path,
+                c.drop_rate_pct,
+                m.original_name,
+                m.french_name,
+                m.director,
+                m.year,
+                m.synopsis,
+                m.vote_average,
+                m.awards_json,
+                m.awards_count
+            FROM cards AS c
+            INNER JOIN movies AS m
+                ON m.tmdb_id = c.tmdb_id
+            WHERE c.image_path IS NOT NULL
+              AND TRIM(c.image_path) != ''
+            ORDER BY
+                m.french_name COLLATE NOCASE,
+                m.original_name COLLATE NOCASE,
+                c.card_id
+            """
+        ).fetchall()
+
+    cards: list[CardOut] = []
+
+    for row in rows:
+        source_id = str(row["card_id"])
+        name = str(
+            row["french_name"]
+            or row["original_name"]
+            or source_id
+        ).strip()
+
+        metadata = {
+            key: value
+            for key, value in {
+                "tmdb_id": str(row["tmdb_id"]),
+                "original_name": str(
+                    row["original_name"] or ""
+                ).strip(),
+                "director": str(
+                    row["director"] or ""
+                ).strip(),
+                "year": str(
+                    row["year"] or ""
+                ).strip(),
+                "synopsis": str(
+                    row["synopsis"] or ""
+                ).strip(),
+                "vote_average": str(
+                    row["vote_average"] or ""
+                ).strip(),
+                "awards_count": str(
+                    row["awards_count"] or "0"
+                ).strip(),
+                "awards_json": str(row["awards_json"] or "[]"),
+                "drop_rate_pct": str(
+                    row["drop_rate_pct"] or ""
+                ).strip(),
+            }.items()
+            if value
+        }
+
+        cards.append(
+            CardOut(
+                card_key=_stable_hash(
+                    "movies",
+                    source_id,
+                ),
+                game="movies",
+                product_set="CINEMA",
+                card_number=str(row["tmdb_id"]),
+                name=name,
+                rarity=str(
+                    row["rarity_label"]
+                    or row["rarity"]
+                    or ""
+                ),
+                variant="",
+                drop_class=str(
+                    row["rarity"] or ""
+                ),
+                image_url=resolve_image_url(
+                    "movies",
+                    local_paths=(
+                        row["image_path"],
+                    ),
+                ),
+                metadata=metadata or None,
             )
         )
 

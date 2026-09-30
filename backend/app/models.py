@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-Game = Literal["onepiece", "pokemon", "riftbound", "flags"]
+Game = Literal["onepiece", "pokemon", "riftbound", "flags", "movies"]
 
 
 class SetSummary(BaseModel):

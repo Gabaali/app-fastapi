@@ -995,6 +995,184 @@ def _simulate_flags(set_code: str) -> list[CardOut]:
     return pack
 
 # ============================================================
+# CINÉMA
+# ============================================================
+
+MOVIES_SET_CODE = "CINEMA"
+MOVIES_CARDS_PER_PACK = 13
+
+
+def _movie_booster_rules() -> dict[str, list[dict]]:
+    with connect_catalog("movies") as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                rule_id,
+                slot_group,
+                slot_count,
+                rarity,
+                variant,
+                final_probability_pct
+            FROM booster_rules
+            ORDER BY rule_id
+            """
+        ).fetchall()
+
+    grouped: dict[str, list[dict]] = defaultdict(list)
+
+    for row in rows:
+        grouped[
+            str(row["slot_group"])
+        ].append(dict(row))
+
+    return grouped
+
+
+def _movie_pools(
+    cards: list[CardOut],
+) -> dict[str, list[CardOut]]:
+    pools: dict[
+        str,
+        list[CardOut],
+    ] = defaultdict(list)
+
+    for card in cards:
+        key = str(
+            card.drop_class or ""
+        ).strip().lower()
+
+        if key:
+            pools[key].append(card)
+
+    return pools
+
+
+def _movie_pick_rule(
+    rows: list[dict],
+) -> dict:
+    usable = [
+        row
+        for row in rows
+        if float(
+            row.get(
+                "final_probability_pct"
+            ) or 0.0
+        ) > 0
+    ]
+
+    if not usable:
+        raise ValueError(
+            "Aucune règle de drop Cinéma utilisable."
+        )
+
+    return random.choices(
+        usable,
+        weights=[
+            float(
+                row[
+                    "final_probability_pct"
+                ]
+            )
+            for row in usable
+        ],
+        k=1,
+    )[0]
+
+
+def _simulate_movies(
+    set_code: str,
+) -> list[CardOut]:
+    if set_code.upper() != MOVIES_SET_CODE:
+        raise ValueError(
+            f"Extension cinéma inconnue: {set_code}."
+        )
+
+    cards = load_cards(
+        "movies",
+        MOVIES_SET_CODE,
+    )
+
+    if not cards:
+        raise ValueError(
+            "Aucune carte cinéma disponible."
+        )
+
+    rules = _movie_booster_rules()
+    pools = _movie_pools(cards)
+
+    group_order = (
+        "common_slots",
+        "uncommon_slots",
+        "mid_slots",
+        "premium_slot",
+    )
+
+    slot_labels = {
+        "common_slots": "Commun",
+        "uncommon_slots": "Peu commun",
+        "mid_slots": "Rare / Super rare",
+        "premium_slot": "Premium",
+    }
+
+    used: set[str] = set()
+    pack: list[CardOut] = []
+
+    for group in group_order:
+        group_rules = rules.get(
+            group,
+            [],
+        )
+
+        if not group_rules:
+            raise ValueError(
+                f"Règles Cinéma absentes: {group}."
+            )
+
+        slot_count = int(
+            group_rules[0].get(
+                "slot_count"
+            ) or 0
+        )
+
+        for _ in range(slot_count):
+            rule = _movie_pick_rule(
+                group_rules
+            )
+
+            rarity = str(
+                rule.get("rarity") or ""
+            ).strip().lower()
+
+            pool = pools.get(
+                rarity,
+                [],
+            )
+
+            if not pool:
+                raise ValueError(
+                    "Pool Cinéma vide pour "
+                    f"{rarity}."
+                )
+
+            card = _with_slot(
+                _draw(pool, used),
+                slot_labels[group],
+            )
+
+            if card:
+                pack.append(card)
+
+    if len(pack) != MOVIES_CARDS_PER_PACK:
+        raise ValueError(
+            "Impossible de construire un booster "
+            f"Cinéma complet: {len(pack)}/"
+            f"{MOVIES_CARDS_PER_PACK}."
+        )
+
+    return pack
+
+
+# ============================================================
 # PUBLIC ENTRY POINT
 # ============================================================
 
@@ -1010,5 +1188,8 @@ def simulate_booster(game: Game, set_code: str) -> list[CardOut]:
 
     if game == "flags":
         return _simulate_flags(set_code)
+
+    if game == "movies":
+        return _simulate_movies(set_code)
 
     raise ValueError(f"Jeu non supporté: {game}")

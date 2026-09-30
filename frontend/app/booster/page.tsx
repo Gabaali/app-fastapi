@@ -36,7 +36,8 @@ type Game =
   | "onepiece"
   | "pokemon"
   | "riftbound"
-  | "flags";
+  | "flags"
+  | "movies";
 
 
 type SetSummary = {
@@ -89,6 +90,7 @@ const GAME_LABELS: Record<
   pokemon: "Pokémon",
   riftbound: "Riftbound",
   flags: "Drapeaux du monde",
+  movies: "Cinéma",
 };
 
 
