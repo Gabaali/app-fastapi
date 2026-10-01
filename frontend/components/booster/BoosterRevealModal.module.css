@@ -4033,208 +4033,8 @@
 
   object-fit: contain;
 }
-@media (max-width: 768px) {
 
-  /*
-   * Le poster remonte dans l'écran.
-   */
-  .movieTiltFrame {
-    touch-action: none;
 
-    transform-style:
-      preserve-3d;
-
-    will-change:
-      transform;
-  }
-
-
-  /*
-   * Les informations doivent passer
-   * DEVANT les couches d'animation.
-   */
-  .mobileMeta {
-    position: relative;
-
-    z-index: 50;
-
-    pointer-events: auto;
-  }
-
-
-  .mobileMovieInfo {
-    position: relative;
-
-    z-index: 51;
-
-    width: min(
-      calc(100vw - 42px),
-      520px
-    );
-
-    margin: 6px auto 0;
-
-    display: flex;
-    flex-direction: column;
-
-    align-items: center;
-
-    gap: 10px;
-
-    pointer-events: auto;
-  }
-
-
-  .mobileMovieTitle {
-    display: block;
-
-    width: 100%;
-
-    color: #fff;
-
-    font-size: 22px;
-    line-height: 1.15;
-
-    font-weight: 800;
-
-    text-align: center;
-  }
-
-
-  .mobileMovieDirector {
-    display: block;
-
-    color:
-      rgba(
-        255,
-        255,
-        255,
-        0.68
-      );
-
-    font-size: 15px;
-    line-height: 1.35;
-
-    text-align: center;
-  }
-
-
-  .mobileMovieToggle {
-    position: relative;
-
-    z-index: 60;
-
-    appearance: none;
-
-    border: 0;
-
-    padding: 8px 4px;
-
-    background: transparent;
-
-    color:
-      rgba(
-        255,
-        255,
-        255,
-        0.82
-      );
-
-    font: inherit;
-
-    font-size: 15px;
-    font-weight: 600;
-
-    display: flex;
-    align-items: center;
-
-    gap: 7px;
-
-    cursor: pointer;
-
-    pointer-events: auto;
-
-    touch-action: manipulation;
-  }
-
-
-  .mobileMovieDetails {
-    width: 100%;
-
-    padding: 14px 16px;
-
-    border:
-      1px solid
-      rgba(
-        255,
-        255,
-        255,
-        0.10
-      );
-
-    border-radius: 14px;
-
-    background:
-      rgba(
-        255,
-        255,
-        255,
-        0.04
-      );
-
-    text-align: left;
-
-    font-size: 13px;
-    line-height: 1.55;
-
-    color:
-      rgba(
-        255,
-        255,
-        255,
-        0.78
-      );
-
-    pointer-events: auto;
-  }
-
-
-  .mobileMovieDetails p {
-    margin: 0;
-  }
-
-
-  .mobileMovieAwards {
-    margin-top: 12px;
-
-    display: flex;
-    flex-direction: column;
-
-    gap: 4px;
-  }
-
-
-  .mobileMovieAwards strong {
-    color: #fff;
-
-    font-size: 12px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.06em;
-  }
-}
-.backgroundGrid,
-.vignette,
-.aura,
-.particles,
-.rarityImpact {
-  pointer-events: none;
-}
-.mobileMeta {
-  z-index: 50;
-  pointer-events: auto;
-}
 .flagBackFallback {
   width: 100%;
   height: 100%;
@@ -4358,5 +4158,48 @@
 
       opacity: 0;
     }
+  }
+}
+
+
+/* Keep the mobile movie information in flow, below the poster. */
+@media (max-width: 900px) {
+  .movieStage {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .movieStage .moviePoster {
+    width: min(62vw, 300px, 38dvh);
+    flex-shrink: 0;
+  }
+
+  .moviePoster.inspectable {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .movieStage .mobileMeta {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    z-index: 10;
+    min-height: 0;
+    max-height: 30dvh;
+    overflow-y: auto;
+    flex-shrink: 1;
+    pointer-events: auto;
+  }
+
+  .mobileMeta .movieInfo {
+    margin: 4px 0;
+    font-size: .8rem;
+  }
+
+  .mobileMeta .movieInfo summary {
+    padding: 8px 0;
+    touch-action: manipulation;
   }
 }

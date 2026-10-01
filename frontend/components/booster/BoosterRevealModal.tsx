@@ -127,12 +127,11 @@ export default function BoosterRevealModal({
   const [revealed, setRevealed] = useState(false);
   const [suspense, setSuspense] = useState(false);
   const [impactActive, setImpactActive] = useState(false);
-  const [movieInfoOpen, setMovieInfoOpen] =
-    useState(false);
+
   const tiltRef = useRef<HTMLDivElement | null>(null);
   const timersRef = useRef<number[]>([]);
-  const touchTiltActiveRef =
-    useRef(false);
+  const touchPointerRef = useRef<number | null>(null);
+
   const current = sortedCards[index];
   const [
     teaserActive,
@@ -180,9 +179,6 @@ export default function BoosterRevealModal({
     timersRef.current.forEach((timer) => window.clearTimeout(timer));
     timersRef.current = [];
   };
-  useEffect(() => {
-    setMovieInfoOpen(false);
-  }, [index]);
   useEffect(() => {
     if (!open) {
       return;
@@ -446,170 +442,44 @@ export default function BoosterRevealModal({
     element.style.setProperty("--my", "50%");
   }
 
-  function applyTilt(
-    event:
-      ReactPointerEvent<HTMLDivElement>
-  ) {
-    if (
-      !revealed
-      || !tiltRef.current
-    ) {
-      return;
+  const applyTilt = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!revealed || !tiltRef.current) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+
+    const isTouch = event.pointerType !== "mouse";
+    const tiltY = (x * 2 - 1) * (isTouch ? 5 : 10);
+    const tiltX = -(y * 2 - 1) * (isTouch ? 4 : 8);
+
+    tiltRef.current.style.setProperty("--tilt-x", `${tiltX.toFixed(2)}deg`);
+    tiltRef.current.style.setProperty("--tilt-y", `${tiltY.toFixed(2)}deg`);
+    tiltRef.current.style.setProperty("--mx", `${(x * 100).toFixed(1)}%`);
+    tiltRef.current.style.setProperty("--my", `${(y * 100).toFixed(1)}%`);
+  };
+
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!revealed || current?.game !== "movies" || event.pointerType === "mouse" || !event.isPrimary) return;
+    touchPointerRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    applyTilt(event);
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse" && touchPointerRef.current !== event.pointerId) return;
+    applyTilt(event);
+  };
+
+  const onPointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (touchPointerRef.current !== event.pointerId) return;
+    touchPointerRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
-
-    const rect =
-      event.currentTarget
-        .getBoundingClientRect();
-
-    const x =
-      Math.max(
-        0,
-        Math.min(
-          1,
-          (
-            event.clientX
-            - rect.left
-          ) / rect.width
-        )
-      );
-
-    const y =
-      Math.max(
-        0,
-        Math.min(
-          1,
-          (
-            event.clientY
-            - rect.top
-          ) / rect.height
-        )
-      );
-
-    const isTouch =
-      event.pointerType !== "mouse";
-
-    /*
-    * Tilt plus léger au doigt.
-    */
-    const maxY =
-      isTouch ? 5 : 10;
-
-    const maxX =
-      isTouch ? 4 : 8;
-
-    const tiltY =
-      (x * 2 - 1)
-      * maxY;
-
-    const tiltX =
-      -(y * 2 - 1)
-      * maxX;
-
-    tiltRef.current.style
-      .setProperty(
-        "--tilt-x",
-        `${tiltX.toFixed(2)}deg`
-      );
-
-    tiltRef.current.style
-      .setProperty(
-        "--tilt-y",
-        `${tiltY.toFixed(2)}deg`
-      );
-
-    tiltRef.current.style
-      .setProperty(
-        "--mx",
-        `${(x * 100).toFixed(1)}%`
-      );
-
-    tiltRef.current.style
-      .setProperty(
-        "--my",
-        `${(y * 100).toFixed(1)}%`
-      );
-  }
-
-
-function onPointerDown(
-  event:
-    ReactPointerEvent<HTMLDivElement>
-) {
-  if (!revealed) {
-    return;
-  }
-
-  if (
-    event.pointerType !== "mouse"
-  ) {
-    touchTiltActiveRef.current =
-      true;
-
-    try {
-      event.currentTarget
-        .setPointerCapture(
-          event.pointerId
-        );
-    } catch {
-      // navigateur sans capture
-    }
-  }
-
-  applyTilt(event);
-}
-
-
-function onPointerMove(
-  event:
-    ReactPointerEvent<HTMLDivElement>
-) {
-  if (!revealed) {
-    return;
-  }
-
-  /*
-   * Avec une souris :
-   * le mouvement suffit.
-   *
-   * Avec le doigt :
-   * il faut d'abord toucher le poster.
-   */
-  if (
-    event.pointerType !== "mouse"
-    && !touchTiltActiveRef.current
-  ) {
-    return;
-  }
-
-  applyTilt(event);
-}
-
-
-function onPointerEnd(
-  event:
-    ReactPointerEvent<HTMLDivElement>
-) {
-  touchTiltActiveRef.current =
-    false;
-
-  try {
-    if (
-      event.currentTarget
-        .hasPointerCapture(
-          event.pointerId
-        )
-    ) {
-      event.currentTarget
-        .releasePointerCapture(
-          event.pointerId
-        );
-    }
-  } catch {
-    // rien
-  }
-
-  resetTilt();
-}
+    resetTilt();
+  };
 
 
 const cssVars = {
@@ -727,7 +597,7 @@ const cssVars = {
             ) : null}
           </section>
 
-          <section className={styles.centerStage}>
+          <section className={`${styles.centerStage} ${current.game === "movies" ? styles.movieStage : ""}`}>
             <Aura profile={profile} active={revealing || revealed} />
 
             
@@ -761,9 +631,9 @@ const cssVars = {
             <div
               key={cardId(current, index)}
               ref={tiltRef}
-              className={`${styles.tiltFrame} ${
-                current.game === "movies"
-                  ? styles.movieTiltFrame
+              className={`${styles.tiltFrame} ${current.game === "movies" ? styles.moviePoster : ""} ${
+                current.game === "flags"
+                  ? styles.flagTiltFrame
                   : ""
               } ${
                 teaserActive && !revealed
@@ -774,28 +644,14 @@ const cssVars = {
                   ? styles.inspectable
                   : ""
               }`}
-              onPointerDown={
-                onPointerDown
-              }
-              onPointerMove={
-                onPointerMove
-              }
-              onPointerUp={
-                onPointerEnd
-              }
-              onPointerCancel={
-                onPointerEnd
-              }
-              onPointerLeave={
-                (event) => {
-                  if (
-                    event.pointerType
-                    === "mouse"
-                  ) {
-                    resetTilt();
-                  }
-                }
-              }
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerEnd}
+              onPointerCancel={onPointerEnd}
+              onLostPointerCapture={onPointerEnd}
+              onPointerLeave={(event) => {
+                if (event.pointerType === "mouse") resetTilt();
+              }}
             >
               <div
                 className={`${styles.cardButton} ${
@@ -1003,118 +859,7 @@ const cssVars = {
                   ? current.name
                   : "Carte mystère"}
               </strong>
-              {revealed &&
-              current.game === "movies" ? (
-                <div className={styles.mobileMovieInfo}>
-                  <strong
-                    className={
-                      styles.mobileMovieTitle
-                    }
-                  >
-                    {current.name}
-                  </strong>
 
-                  {current.metadata?.director ? (
-                    <span
-                      className={
-                        styles.mobileMovieDirector
-                      }
-                    >
-                      Réalisation :{" "}
-                      {current.metadata.director}
-                    </span>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    className={
-                      styles.mobileMovieToggle
-                    }
-                    onClick={() =>
-                      setMovieInfoOpen(
-                        (value) => !value
-                      )
-                    }
-                    aria-expanded={
-                      movieInfoOpen
-                    }
-                  >
-                    <span>
-                      {movieInfoOpen
-                        ? "▼"
-                        : "▶"}
-                    </span>
-
-                    <span>
-                      Description et récompenses
-                      {" ("}
-                      {Number(
-                        current.metadata
-                          ?.awards_count ?? 0
-                      )}
-                      {")"}
-                    </span>
-                  </button>
-
-                  {movieInfoOpen ? (
-                    <div
-                      className={
-                        styles.mobileMovieDetails
-                      }
-                    >
-                      {current.metadata?.synopsis ? (
-                        <p>
-                          {
-                            current.metadata
-                              .synopsis
-                          }
-                        </p>
-                      ) : (
-                        <p>
-                          Aucune description
-                          disponible.
-                        </p>
-                      )}
-
-                      <div
-                        className={
-                          styles.mobileMovieAwards
-                        }
-                      >
-                        <strong>
-                          Récompenses
-                        </strong>
-
-                        <span>
-                          {Number(
-                            current.metadata
-                              ?.awards_count ?? 0
-                          ) > 0
-                            ? `${
-                                current.metadata
-                                  ?.awards_count
-                              } récompense${
-                                Number(
-                                  current.metadata
-                                    ?.awards_count
-                                ) > 1
-                                  ? "s"
-                                  : ""
-                              } référencée${
-                                Number(
-                                  current.metadata
-                                    ?.awards_count
-                                ) > 1
-                                  ? "s"
-                                  : ""
-                              }.`
-                            : "Aucune récompense référencée."}
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
               {revealed ? (
                 <>
                   <span>
