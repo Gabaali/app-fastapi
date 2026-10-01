@@ -1930,6 +1930,8 @@
 }
 
 .actionColumn {
+  gap: 14px;
+  flex-direction: column;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -2672,6 +2674,29 @@
 
   transition: none !important;
 }
+
+.boosterFavorite { width: 100%; max-width: 320px; }
+
+.boosterFavoriteButton {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  background: #171d2b;
+  color: #d8deed;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.boosterFavoriteButton[aria-pressed="true"] {
+  border-color: #b78128;
+  color: #ffdc83;
+  background: #32281b;
+}
+
+.boosterFavoriteButton:disabled { opacity: .5; cursor: default; }
+.boosterFavoriteError { margin: 8px 0 0; color: #ffc0c9; font-size: 12px; line-height: 1.4; }
 
 .movieLegendaryHidden {
   visibility: hidden;

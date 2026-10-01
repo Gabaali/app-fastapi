@@ -18,6 +18,7 @@ import {
   type RevealProfile,
 } from "@/lib/reveal-effects";
 import styles from "./BoosterRevealModal.module.css";
+import BoosterFavoriteButton from "./BoosterFavoriteButton";
 import {
   getCardBack,
 } from "@/lib/tcg-assets";
@@ -953,6 +954,9 @@ const cssVars = {
           </section>
 
           <section className={styles.actionColumn}>
+            {revealed && current.card_key ? (
+              <BoosterFavoriteButton key={current.card_key} cardKey={current.card_key} name={current.name} />
+            ) : null}
             {revealed ? (
               <button type="button" className={styles.nextButton} onClick={nextCard}>
                 <span>
