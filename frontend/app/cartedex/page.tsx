@@ -93,6 +93,10 @@ function cardRarityLabel(
   );
 }
 
+function normalizeSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr").trim();
+}
+
 function FlagThumb({
   src,
   alt,
@@ -249,6 +253,53 @@ export default function CartedexPage() {
 
   const [error, setError] =
     useState("");
+  const [search, setSearch] = useState("");
+  const [rarityFilter, setRarityFilter] = useState("");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [userId, setUserId] = useState<string | null>(null);
+  const [favoritesReady, setFavoritesReady] = useState(false);
+  const [savingFavorite, setSavingFavorite] = useState(false);
+  const [favoriteError, setFavoriteError] = useState("");
+
+  const rarityOptions = useMemo(() => [...new Set(
+    (cartedex?.cards ?? []).map(cardRarityLabel)
+  )].sort((a, b) => a.localeCompare(b, "fr")), [cartedex]);
+  const visibleCards = useMemo(() => (cartedex?.cards ?? []).filter((card) =>
+    normalizeSearch(card.name).includes(normalizeSearch(search))
+    && (!rarityFilter || cardRarityLabel(card) === rarityFilter)
+    && (!favoritesOnly || favorites.has(card.card_key))
+  ), [cartedex, search, rarityFilter, favoritesOnly, favorites]);
+
+  useEffect(() => {
+    setRarityFilter("");
+  }, [game, setCode]);
+
+  async function toggleFavorite(card: CartedexCard) {
+    if (!userId || !favoritesReady || savingFavorite) return;
+    setSavingFavorite(true);
+    setFavoriteError("");
+    const removing = favorites.has(card.card_key);
+    try {
+      const { error: saveError } = removing
+        ? await supabase.from("user_favorites").delete().eq("user_id", userId).eq("card_key", card.card_key)
+        : await supabase.from("user_favorites").upsert(
+          { user_id: userId, card_key: card.card_key },
+          { onConflict: "user_id,card_key", ignoreDuplicates: true }
+        );
+      if (saveError) throw saveError;
+      setFavorites((previous) => {
+        const next = new Set(previous);
+        if (removing) next.delete(card.card_key);
+        else next.add(card.card_key);
+        return next;
+      });
+    } catch {
+      setFavoriteError("Impossible de sauvegarder le favori. Réessaie dans un instant.");
+    } finally {
+      setSavingFavorite(false);
+    }
+  }
 
   const selectedSet =
     useMemo(
@@ -262,6 +313,7 @@ export default function CartedexPage() {
     );
 
   useEffect(() => {
+    let cancelled = false;
     async function checkAuth() {
       const {
         data: { user },
@@ -271,10 +323,24 @@ export default function CartedexPage() {
 
       if (!user) {
         router.replace("/login");
+        return;
+      }
+      if (cancelled) return;
+      setUserId(user.id);
+      try {
+        const { data, error: loadError } = await supabase.from("user_favorites")
+          .select("card_key").eq("user_id", user.id);
+        if (loadError) throw loadError;
+        if (cancelled) return;
+        setFavorites(new Set((data ?? []).map((item: { card_key: string }) => item.card_key)));
+        setFavoritesReady(true);
+      } catch {
+        if (!cancelled) setFavoriteError("Les favoris sont indisponibles. Leur stockage Supabase doit être configuré, puis la page rechargée.");
       }
     }
 
     checkAuth();
+    return () => { cancelled = true; };
   }, [router, supabase]);
 
   useEffect(() => {
@@ -476,6 +542,30 @@ export default function CartedexPage() {
         </label>
       </section>
 
+      <section className={styles.filters} aria-label="Recherche et filtres du Cartédex">
+        <label>
+          Rechercher par nom
+          <input type="search" value={search} placeholder="Nom d’une carte ou d’un film…"
+            onChange={(event) => setSearch(event.target.value)} />
+        </label>
+        <label>
+          Rareté
+          <select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value)}>
+            <option value="">Toutes les raretés</option>
+            {rarityOptions.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+          </select>
+        </label>
+        <label className={styles.favoriteFilter}>
+          <input type="checkbox" checked={favoritesOnly} disabled={!favoritesReady}
+            onChange={(event) => setFavoritesOnly(event.target.checked)} />
+          Favoris uniquement
+        </label>
+        <button type="button" className={styles.boosterButton} onClick={() => {
+          setSearch(""); setRarityFilter(""); setFavoritesOnly(false);
+        }}>Réinitialiser</button>
+      </section>
+      {favoriteError ? <p className={styles.error} role="alert">{favoriteError}</p> : null}
+
       {error ? (
         <div
           className={styles.error}
@@ -553,7 +643,7 @@ export default function CartedexPage() {
           <section
             className={styles.grid}
           >
-            {cartedex.cards.map(
+            {visibleCards.map(
               (card) => (
                 <article
                   className={`${styles.card} ${
@@ -631,6 +721,13 @@ export default function CartedexPage() {
                     ) : null}
                   </div>
 
+                  <button type="button" className={styles.favoriteButton}
+                    aria-pressed={favorites.has(card.card_key)}
+                    aria-label={`${favorites.has(card.card_key) ? "Retirer des" : "Ajouter aux"} favoris : ${card.name}`}
+                    disabled={!favoritesReady || savingFavorite}
+                    onClick={() => toggleFavorite(card)}>
+                    {favorites.has(card.card_key) ? "★ Favori" : "☆ Ajouter aux favoris"}
+                  </button>
                   <div
                     className={
                       styles.cardBody
@@ -656,6 +753,10 @@ export default function CartedexPage() {
               )
             )}
           </section>
+          <p className={styles.resultCount} role="status">
+            {visibleCards.length} / {cartedex.cards.length} cartes affichées dans cette extension.
+            {visibleCards.length === 0 ? " Aucune carte ne correspond à tes filtres." : ""}
+          </p>
         </>
       ) : loadingCards ? (
         <div

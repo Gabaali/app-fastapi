@@ -2673,6 +2673,93 @@
   transition: none !important;
 }
 
+.movieLegendaryHidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.movieLegendaryReveal {
+  animation: moviePosterArrival 900ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.movieClueStage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 12;
+  pointer-events: none;
+  padding: 20px;
+}
+
+.movieClueHalo {
+  position: absolute;
+  width: min(100%, 540px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #dca93530, #9b651516 45%, transparent 70%);
+  animation: movieGoldPulse 2.4s ease-in-out infinite;
+}
+
+.movieClueText {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+  animation: movieClueArrival 2.4s ease both;
+}
+
+.movieClueLabel {
+  color: #dfc58b;
+  font-size: clamp(10px, 1.4vw, 13px);
+  font-weight: 600;
+  letter-spacing: .32em;
+}
+
+.movieClueValue {
+  max-width: 100%;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4.5vw, 62px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  color: #ffdc83;
+  background: linear-gradient(115deg, #b78128, #ffecb0 35%, #e8b74d 55%, #fff0bd 75%, #bd882e);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 18px #e8b74d55);
+}
+
+.movieClueLine {
+  width: min(60%, 200px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #f5d17a, transparent);
+  box-shadow: 0 0 16px #e8b74d66;
+}
+
+@keyframes movieClueArrival {
+  0% { opacity: 0; transform: translateY(18px) scale(.94); }
+  20%, 78% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(1.03); }
+}
+
+@keyframes movieGoldPulse {
+  0%, 100% { opacity: .5; transform: scale(.9); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes moviePosterArrival {
+  from { opacity: 0; transform: translateY(25px) scale(.82); filter: brightness(1.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movieClueText { animation: none !important; }
+}
+
 
 /* =========================================================
    CONSTRUCTION DE LA CARTE EN ÉTINCELLES

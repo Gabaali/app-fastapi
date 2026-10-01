@@ -141,6 +141,61 @@
   color: white;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.filters label {
+  display: grid;
+  gap: 8px;
+  color: #9ba6bb;
+  font-size: 13px;
+  flex: 1 1 200px;
+}
+
+.filters input[type="search"], .filters select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 12px;
+  background: #0d1220;
+  color: white;
+}
+
+.filters .favoriteFilter {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  flex: 0 1 auto;
+}
+
+.favoriteButton {
+  display: block;
+  width: calc(100% - 20px);
+  min-height: 40px;
+  margin: 10px 10px 0;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 10px;
+  background: #171d2b;
+  color: #c1cadf;
+  cursor: pointer;
+}
+
+.favoriteButton[aria-pressed="true"] {
+  color: #ffdc83;
+  border-color: #b78128;
+  background: #32281b;
+}
+
+.favoriteButton:disabled { opacity: .5; cursor: default; }
+.resultCount { color: #9ba6bb; margin-top: 18px; }
+
 .progressPanel {
   margin-top: 24px;
 

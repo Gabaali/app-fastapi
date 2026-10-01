@@ -127,6 +127,7 @@ export default function BoosterRevealModal({
   const [revealed, setRevealed] = useState(false);
   const [suspense, setSuspense] = useState(false);
   const [impactActive, setImpactActive] = useState(false);
+  const [movieClue, setMovieClue] = useState<"director" | "year">("director");
 
   const tiltRef = useRef<HTMLDivElement | null>(null);
   const timersRef = useRef<number[]>([]);
@@ -141,14 +142,16 @@ export default function BoosterRevealModal({
     () => (current ? getRevealProfile(current) : null),
     [current]
   );
+  const isLegendaryMovie = current?.game === "movies" && (profile?.rank ?? 0) >= 92;
+  const hasSparkReveal = (profile?.impactLevel ?? 0) >= 4;
   const hasTeaserReveal =
-    (profile?.impactLevel ?? 0) >= 4;
+    isLegendaryMovie || hasSparkReveal;
 
   const materializeMs =
     hasTeaserReveal ? 100 : 0;
   const teaserMs =
     profile &&
-    profile.impactLevel >= 4
+    hasSparkReveal
       ? Math.min(
           4000,
           Math.round(
@@ -244,6 +247,22 @@ export default function BoosterRevealModal({
   setTeaserActive(
     hasTeaserReveal
   );
+  setMovieClue("director");
+
+  if (isLegendaryMovie) {
+    // Aucun aperçu de l'affiche avant les deux indices.
+    const yearTimer = window.setTimeout(() => setMovieClue("year"), 2400);
+    const posterTimer = window.setTimeout(() => {
+      setTeaserActive(false);
+      setRevealed(true);
+      setImpactActive(true);
+    }, 4800);
+
+    return () => {
+      window.clearTimeout(yearTimer);
+      window.clearTimeout(posterTimer);
+    };
+  }
 
   let startTimer:
     number | undefined;
@@ -372,6 +391,7 @@ export default function BoosterRevealModal({
   teaserMs,
   revealDurationMs,
   hasTeaserReveal,
+  isLegendaryMovie,
   materializeMs,
 ]);
 
@@ -617,7 +637,22 @@ const cssVars = {
             ) : null}
             
             {teaserActive &&
-            profile.impactLevel >= 4 ? (
+            isLegendaryMovie ? (
+              <div className={styles.movieClueStage} role="status" aria-live="polite" aria-atomic="true">
+                <div className={styles.movieClueHalo} aria-hidden="true" />
+                <div key={`${cardId(current, index)}-${movieClue}`} className={styles.movieClueText}>
+                  <span className={styles.movieClueLabel}>
+                    {movieClue === "director" ? "UN FILM DE" : "ANNÉE DE SORTIE"}
+                  </span>
+                  <strong className={styles.movieClueValue}>
+                    {movieClue === "director"
+                      ? current.metadata?.director || "Réalisateur inconnu"
+                      : current.metadata?.year || "Année inconnue"}
+                  </strong>
+                  <span className={styles.movieClueLine} aria-hidden="true" />
+                </div>
+              </div>
+            ) : teaserActive && hasSparkReveal ? (
               <SparkBuildTeaser
                 key={`${cardId(
                   current,
@@ -631,7 +666,12 @@ const cssVars = {
             <div
               key={cardId(current, index)}
               ref={tiltRef}
+              aria-hidden={isLegendaryMovie && !revealed ? true : undefined}
               className={`${styles.tiltFrame} ${current.game === "movies" ? styles.moviePoster : ""} ${
+                isLegendaryMovie
+                  ? revealed ? styles.movieLegendaryReveal : styles.movieLegendaryHidden
+                  : ""
+              } ${
                 current.game === "flags"
                   ? styles.flagTiltFrame
                   : ""
