@@ -283,3 +283,33 @@
   .choices { grid-template-columns: 1fr; }
   .directForm { grid-template-columns: 1fr; }
 }
+
+.quizSelector {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+  max-width: 420px;
+}
+.quizSelector label { color: #9ba6bb; }
+.quizSelector select {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: #0d1220;
+  color: white;
+  font: inherit;
+}
+.domainFilters {
+  margin: 0 0 18px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 18px;
+  background: rgba(20,26,39,.82);
+}
+.domainFilters legend { padding: 0 8px; font-weight: 750; }
+.domainFilters p { color: #9ba6bb; }
+.domainActions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.domainGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.domainGrid label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.domainGrid input { width: 18px; height: 18px; accent-color: #8ea2ff; }

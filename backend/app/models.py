@@ -55,9 +55,11 @@ class QuizQuestionOut(BaseModel):
     choices: list[str] | None = None
     difficulty: Literal["easy", "medium", "hard"]
     reward_coins: int
-    category: Literal["champions", "monde", "films"]
+    category: Literal["champions", "monde", "films", "culture_generale"]
     pool_exhausted: bool = False
     year_tolerance: int | None = None
+    domain: str | None = None
+    domain_label: str | None = None
 
 
 class QuizAnswerRequest(BaseModel):

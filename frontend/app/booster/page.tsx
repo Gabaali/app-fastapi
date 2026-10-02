@@ -739,9 +739,8 @@ useEffect(() => {
                 )
               }
             >
-              Quiz Lore
+              Quiz
             </button>
-          <button type="button" className="ghostButton" onClick={() => router.push("/quiz/cinema")}>Quiz Cinéma</button>
 
 
             <button

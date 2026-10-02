@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -16,7 +17,9 @@ import styles from "./Quiz.module.css";
 
 
 type Difficulty = "easy" | "medium" | "hard";
-type Category = "champions" | "monde" | "films";
+type Category = "champions" | "monde" | "films" | "culture_generale";
+type Theme = "lol" | "cinema" | "culture_generale";
+type Domain = { id: string; label: string };
 type QuestionType = "qcm" | "direct";
 
 type QuizQuestion = {
@@ -29,6 +32,7 @@ type QuizQuestion = {
   category: Category;
   pool_exhausted: boolean;
   year_tolerance: number | null;
+  domain_label: string | null;
 };
 
 type QuizAnswer = {
@@ -66,12 +70,18 @@ const DIFFICULTY_LABELS: Record<Difficulty, string> = {
 };
 
 const CATEGORY_LABELS: Record<Category, string> = {
+  culture_generale: "Culture générale",
   films: "Films",
   champions: "Champions",
   monde: "Monde & factions",
 };
 
-export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
+export default function Quiz({ theme: initialTheme = "lol" }: { theme?: Theme }) {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [domains, setDomains] = useState<Domain[] | null>(null);
+  const [excludedDomains, setExcludedDomains] = useState<string[]>([]);
+  const requestId = useRef(0);
+  const culture = theme === "culture_generale";
   const cinema = theme === "cinema";
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -97,12 +107,19 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
   }, []);
 
   const loadQuestion = useCallback(async () => {
+    const currentRequest = ++requestId.current;
+    setQuestion(null);
     setLoading(true);
     setError("");
     setResult(null);
     setAnswer("");
 
+    if (culture && (!domains || domains.length === excludedDomains.length)) {
+      setLoading(false);
+      return;
+    }
     const params = new URLSearchParams({ theme });
+    if (culture) excludedDomains.forEach((domain) => params.append("excluded_domains", domain));
     if (difficulty) params.set("difficulty", difficulty);
     if (category) params.set("category", category);
 
@@ -110,8 +127,10 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
       const response = await apiFetch<QuizQuestion>(
         `/api/quiz/question${params.size ? `?${params.toString()}` : ""}`,
       );
+      if (currentRequest !== requestId.current) return;
       setQuestion(response);
     } catch (err) {
+      if (currentRequest !== requestId.current) return;
       setQuestion(null);
       setError(
         err instanceof Error
@@ -119,9 +138,15 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
           : "Impossible de charger une question.",
       );
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [difficulty, category, theme]);
+  }, [difficulty, category, theme, culture, domains, excludedDomains]);
+
+  useEffect(() => {
+    apiFetch<Domain[]>("/api/quiz/domains").then(setDomains).catch((err) => {
+      setError(err instanceof Error ? err.message : "Impossible de charger les thèmes.");
+    });
+  }, []);
 
   useEffect(() => {
     async function boot() {
@@ -195,7 +220,7 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
       <header className={styles.topbar}>
         <div>
           <span className={styles.eyebrow}>LORE LAB</span>
-          <strong>{cinema ? "Quiz Cinéma" : "Quiz Runeterra"}</strong>
+          <strong>Quiz</strong>
         </div>
 
         <div className={styles.navActions}>
@@ -214,15 +239,25 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
         </div>
       </header>
 
-      <nav className={styles.navActions} aria-label="Quiz" style={{ marginTop: 20 }}>
-        <button type="button" className={styles.navButton} aria-current={!cinema ? "page" : undefined} onClick={() => router.push("/quiz")}>Quiz LoL</button>
-        <button type="button" className={styles.navButton} aria-current={cinema ? "page" : undefined} onClick={() => router.push("/quiz/cinema")}>Quiz Cinéma</button>
-      </nav>
+      <section className={styles.quizSelector}>
+        <label htmlFor="quiz-type">Type de quiz</label>
+        <select id="quiz-type" value={theme} disabled={submitting} onChange={(event) => {
+          ++requestId.current;
+          setQuestion(null);
+          setResult(null);
+          setCategory("");
+          setTheme(event.target.value as Theme);
+        }}>
+          <option value="lol">League of Legends</option>
+          <option value="cinema">Cinéma</option>
+          <option value="culture_generale">Culture générale</option>
+        </select>
+      </section>
       <section className={styles.hero}>
         <span className={styles.eyebrow}>GAGNE DES PIÈCES</span>
-        <h1>{cinema ? "Teste ta culture cinéma." : "Teste ton lore de Runeterra."}</h1>
+        <h1>{culture ? "Teste ta culture générale." : cinema ? "Teste ta culture cinéma." : "Teste ton lore de Runeterra."}</h1>
         <p>
-          {cinema ? "Retrouve les films, leurs interprètes et leurs années de sortie." : "Réponds aux questions de lore de Runeterra."}
+          {culture ? "Choisis tes thèmes et réponds aux questions de culture générale." : cinema ? "Retrouve les films, leurs interprètes et leurs années de sortie." : "Réponds aux questions de lore de Runeterra."}
           {" "}Facile : 20 pièces, moyenne : 30, difficile : 50. Une même question ne paie qu'une fois.
           {cinema ? " Un écart de 1 ou 2 ans rapporte la moitié des pièces." : ""}
         </p>
@@ -250,12 +285,37 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
         </div>
       </section>
 
+      {culture ? (
+        <fieldset className={styles.domainFilters} disabled={submitting}>
+          <legend>Thèmes de questions</legend>
+          <p>Décoche les thèmes que tu souhaites exclure.</p>
+          <div className={styles.domainActions}>
+            <button type="button" className={styles.navButton} disabled={!domains} onClick={() => setExcludedDomains([])}>Tout cocher</button>
+            <button type="button" className={styles.navButton} disabled={!domains} onClick={() => setExcludedDomains(domains?.map((domain) => domain.id) ?? [])}>Tout décocher</button>
+          </div>
+          <div className={styles.domainGrid}>
+            {domains?.map((domain) => (
+              <label key={domain.id}>
+                <input type="checkbox" checked={!excludedDomains.includes(domain.id)} onChange={(event) => {
+                  ++requestId.current;
+                  setQuestion(null);
+                  setResult(null);
+                  setExcludedDomains((current) => event.target.checked ? current.filter((id) => id !== domain.id) : [...current, domain.id]);
+                }} />
+                {domain.label}
+              </label>
+            ))}
+          </div>
+          {!domains ? <p>Chargement des thèmes…</p> : excludedDomains.length === domains.length ? <p role="status">Coche au moins un thème pour jouer.</p> : null}
+        </fieldset>
+      ) : null}
+
       <section className={styles.filters}>
         <label>
           Catégorie
-          <select value={category} onChange={(event) => setCategory(event.target.value as Category | "")}>
+          <select disabled={submitting} value={category} onChange={(event) => setCategory(event.target.value as Category | "")}>
             <option value="">Toutes</option>
-            {cinema ? <option value="films">Films</option> : <>
+            {culture ? <option value="culture_generale">Culture générale</option> : cinema ? <option value="films">Films</option> : <>
               <option value="champions">Champions</option>
               <option value="monde">Monde & factions</option>
             </>}
@@ -264,7 +324,7 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
 
         <label>
           Difficulté
-          <select value={difficulty} onChange={(event) => setDifficulty(event.target.value as Difficulty | "")}>
+          <select disabled={submitting} value={difficulty} onChange={(event) => setDifficulty(event.target.value as Difficulty | "")}>
             <option value="">Toutes</option>
             <option value="easy">Facile</option>
             <option value="medium">Intermédiaire</option>
@@ -272,7 +332,7 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
           </select>
         </label>
 
-        <button type="button" className={styles.filterButton} onClick={loadQuestion} disabled={loading}>
+        <button type="button" className={styles.filterButton} onClick={loadQuestion} disabled={loading || submitting || (culture && (!domains || excludedDomains.length === domains.length))}>
           Nouvelle question
         </button>
       </section>
@@ -285,7 +345,7 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
         ) : question ? (
           <>
             <div className={styles.questionMeta}>
-              <span>{CATEGORY_LABELS[question.category]}</span>
+              <span>{question.domain_label ?? CATEGORY_LABELS[question.category]}</span>
               <span>{DIFFICULTY_LABELS[question.difficulty]}</span>
               <strong>+{question.reward_coins} 🪙</strong>
             </div>
@@ -372,7 +432,7 @@ export default function Quiz({ theme = "lol" }: { theme?: "lol" | "cinema" }) {
             ) : null}
           </>
         ) : (
-          <div className={styles.loading}>Aucune question disponible.</div>
+          <div className={styles.loading}>{culture && domains && excludedDomains.length === domains.length ? "Coche au moins un thème pour jouer." : "Aucune question disponible."}</div>
         )}
       </section>
     </main>

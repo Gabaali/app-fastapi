@@ -22,6 +22,7 @@ QUIZ_DATA_PATH = (
 )
 
 CINEMA_DATA_PATH = QUIZ_DATA_PATH.with_name("cinema_quiz.json")
+CULTURE_DATA_PATH = QUIZ_DATA_PATH.with_name("culture_generale_quiz_20000.json")
 REWARDS_BY_DIFFICULTY = {"easy": 20, "medium": 30, "hard": 50}
 
 DAILY_REWARD_LIMIT = 500
@@ -64,15 +65,16 @@ def load_quiz_questions() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         question["theme"] = "lol"
         question["reward_coins"] = REWARDS_BY_DIFFICULTY[question["difficulty"]]
 
-    cinema_payload = json.loads(CINEMA_DATA_PATH.read_text(encoding="utf-8"))
-    for raw_question in cinema_payload["questions"]:
-        question = dict(raw_question)
-        question["theme"] = "cinema"
-        question["reward_coins"] = REWARDS_BY_DIFFICULTY[question["difficulty"]]
-        question["fact_key"] = "cinema:" + question.get("fact_key", question["id"])
-        if question["id"] in by_id:
-            raise RuntimeError("Identifiant de question dupliqu?.")
-        by_id[question["id"]] = question
+    for theme, path in (("cinema", CINEMA_DATA_PATH), ("culture_generale", CULTURE_DATA_PATH)):
+        quiz_payload = json.loads(path.read_text(encoding="utf-8"))
+        for raw_question in quiz_payload["questions"]:
+            question = dict(raw_question)
+            question["theme"] = theme
+            question["reward_coins"] = REWARDS_BY_DIFFICULTY[question["difficulty"]]
+            question["fact_key"] = theme + ":" + question.get("fact_key", question["id"])
+            if question["id"] in by_id:
+                raise RuntimeError("Identifiant de question dupliqu\u00e9.")
+            by_id[question["id"]] = question
 
     return payload.get("meta", {}), by_id
 
@@ -335,19 +337,34 @@ def _answered_question_ids(user_id: str) -> set[str]:
     }
 
 
+def get_quiz_domains() -> list[dict[str, str]]:
+    _, by_id = load_quiz_questions()
+    domains = {
+        q["domain"]: q.get("domain_label", q["domain"])
+        for q in by_id.values() if q["theme"] == "culture_generale"
+    }
+    return [{"id": domain, "label": label} for domain, label in sorted(domains.items())]
+
+
 def get_random_question(
     *,
     user_id: str,
     difficulty: str | None = None,
     category: str | None = None,
     theme: str = "lol",
+    excluded_domains: list[str] | None = None,
 ) -> dict[str, Any]:
     _, by_id = load_quiz_questions()
+    excluded = set(excluded_domains or [])
+    if theme == "culture_generale":
+        known_domains = {q["domain"] for q in by_id.values() if q["theme"] == theme}
+        if excluded - known_domains:
+            raise HTTPException(status_code=422, detail="Th\u00e8me de question inconnu.")
     answered = _answered_question_ids(user_id)
 
     candidates = []
     for question in by_id.values():
-        if question["theme"] != theme:
+        if question["theme"] != theme or question.get("domain") in excluded:
             continue
         if difficulty and question.get("difficulty") != difficulty:
             continue
@@ -364,7 +381,7 @@ def get_random_question(
         exhausted = True
         candidates = [
             q for q in by_id.values()
-            if q["theme"] == theme
+            if q["theme"] == theme and q.get("domain") not in excluded
             and (not difficulty or q.get("difficulty") == difficulty)
             and (not category or q.get("category") == category)
         ]
@@ -382,6 +399,8 @@ def get_random_question(
         "difficulty": question["difficulty"],
         "reward_coins": int(question["reward_coins"]),
         "category": question["category"],
+        "domain": question.get("domain"),
+        "domain_label": question.get("domain_label"),
         "pool_exhausted": exhausted,
         "year_tolerance": 2 if question.get("domain") == "release_year" else None,
     }

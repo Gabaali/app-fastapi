@@ -11,6 +11,7 @@ from ..models import (
 )
 from ..services.quiz_store import (
     get_quiz_stats,
+    get_quiz_domains,
     get_random_question,
     submit_answer,
 )
@@ -30,16 +31,18 @@ def question(
         Query(),
     ] = None,
     category: Annotated[
-        Literal["champions", "monde", "films"] | None,
+        Literal["champions", "monde", "films", "culture_generale"] | None,
         Query(),
     ] = None,
-    theme: Annotated[Literal["lol", "cinema"], Query()] = "lol",
+    excluded_domains: Annotated[list[str] | None, Query()] = None,
+    theme: Annotated[Literal["lol", "cinema", "culture_generale"], Query()] = "lol",
 ):
     return get_random_question(
         user_id=user_id,
         difficulty=difficulty,
         category=category,
         theme=theme,
+        excluded_domains=excluded_domains,
     )
 
 
@@ -60,3 +63,8 @@ def stats(
     user_id: Annotated[str, Depends(get_current_user_id)],
 ):
     return get_quiz_stats(user_id)
+
+
+@router.get("/domains")
+def domains(user_id: Annotated[str, Depends(get_current_user_id)]):
+    return get_quiz_domains()

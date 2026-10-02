@@ -446,9 +446,8 @@ export default function CartedexPage() {
               router.push("/quiz")
             }
           >
-            Quiz Lore
+            Quiz
           </button>
-          <button type="button" className={styles.boosterButton} onClick={() => router.push("/quiz/cinema")}>Quiz Cinéma</button>
 
           <button
             type="button"
