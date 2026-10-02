@@ -471,8 +471,8 @@ export default function BoosterRevealModal({
     const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
 
     const isTouch = event.pointerType !== "mouse";
-    const tiltY = (x * 2 - 1) * (isTouch ? 5 : 10);
-    const tiltX = -(y * 2 - 1) * (isTouch ? 4 : 8);
+    const tiltY = (x * 2 - 1) * (isTouch ? 18 : 10);
+    const tiltX = -(y * 2 - 1) * (isTouch ? 14 : 8);
 
     tiltRef.current.style.setProperty("--tilt-x", `${tiltX.toFixed(2)}deg`);
     tiltRef.current.style.setProperty("--tilt-y", `${tiltY.toFixed(2)}deg`);
@@ -482,7 +482,7 @@ export default function BoosterRevealModal({
 
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!revealed || current?.game !== "movies" || event.pointerType === "mouse" || !event.isPrimary) return;
+    if (!revealed || event.pointerType === "mouse" || !event.isPrimary) return;
     touchPointerRef.current = event.pointerId;
     event.currentTarget.setPointerCapture(event.pointerId);
     applyTilt(event);
@@ -507,6 +507,9 @@ const cssVars = {
   "--primary": profile.primary,
   "--secondary": profile.secondary,
   "--accent": profile.accent,
+  "--movie-holo-opacity": profile.rank >= 100 ? .52
+    : profile.rank >= 96 ? .44 : profile.rank >= 92 ? .36
+    : profile.rank >= 90 ? .35 : profile.rank >= 86 ? .29 : .23,
   "--duration": `${
     hasTeaserReveal
       ? materializeMs
@@ -669,6 +672,10 @@ const cssVars = {
               ref={tiltRef}
               aria-hidden={isLegendaryMovie && !revealed ? true : undefined}
               className={`${styles.tiltFrame} ${current.game === "movies" ? styles.moviePoster : ""} ${
+                current.game === "movies" && profile.rank >= 80 ? styles.movieHolographic : ""
+              } ${
+                isLegendaryMovie ? styles.movieRainbowHolo : ""
+              } ${
                 isLegendaryMovie
                   ? revealed ? styles.movieLegendaryReveal : styles.movieLegendaryHidden
                   : ""
@@ -1343,7 +1350,7 @@ function SparkBuildTeaser({
   return (
     <div
       className={
-        styles.sparkBuild
+        `${styles.sparkBuild} ${card.game === "movies" && profile.rank >= 80 ? styles.movieHolographic : ""}`
       }
       style={
         {

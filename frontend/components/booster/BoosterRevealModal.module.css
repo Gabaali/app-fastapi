@@ -515,7 +515,7 @@
   --my: 50%;
   position: relative;
   z-index: 10;
-  width: min(34vh, 340px);
+  width: min(48dvh, 480px, 100%);
   min-width: 225px;
   aspect-ratio: 5 / 7;
   transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
@@ -524,7 +524,8 @@
   animation: cardEnter 120ms ease-out both;
 }
 
-.tiltFrame.moviePoster {
+.tiltFrame.moviePoster,
+.movieStage .sparkBuild {
   aspect-ratio: 2 / 3;
 }
 
@@ -543,6 +544,28 @@
 .moviePoster .holo,
 .moviePoster .edgeGlow {
   display: none;
+}
+
+.movieHolographic .holo {
+  display: block;
+  inset: 0;
+  opacity: var(--movie-holo-opacity, .18);
+  background:
+    repeating-linear-gradient(125deg, #9774db33 0%, #c898f088 18%, #a88aff99 35%, #8dbbea44 48%, #e5a1d866 62%, #ad82ec99 80%, #9774db33 100%);
+  background-size: 240% 240%;
+  background-position: var(--mx, 50%) var(--my, 50%);
+  mix-blend-mode: screen;
+  animation: none;
+  transition: background-position .15s ease-out, opacity .2s ease;
+}
+
+.movieRainbowHolo .holo {
+  background-image: repeating-linear-gradient(120deg,
+    #ff668ccc 0%, #ffa65cbb 14%, #ffe27dcc 28%,
+    #77efb9bb 42%, #65d8ffdd 56%, #9c88ffdd 70%,
+    #eb80efcc 84%, #ff668ccc 100%);
+  background-size: 220% 220%;
+  opacity: clamp(.4, calc(var(--movie-holo-opacity, .36) * 1.3), .68);
 }
 
 .movieInfo {
@@ -1874,7 +1897,7 @@
   animation: novaRays 1450ms cubic-bezier(.15,.65,.2,1) both;
 }
 .flagTiltFrame {
-  width: min(78vw, 760px);
+  width: min(92vw, 940px, 100%);
 
   height: auto;
   min-height: 0;
@@ -2703,7 +2726,7 @@
   pointer-events: none;
 }
 
-.movieLegendaryReveal {
+.movieLegendaryReveal .cardButton {
   animation: moviePosterArrival 900ms cubic-bezier(.16, 1, .3, 1) both;
 }
 
@@ -2795,7 +2818,7 @@
 
   z-index: 12;
 
-  width: min(34vh, 340px);
+  width: min(48dvh, 480px, 100%);
   min-width: 225px;
 
   aspect-ratio: 5 / 7;
@@ -3331,9 +3354,15 @@
     min-height: 0;
   }
   
-  .tiltFrame {
-    width: min(62vw, 300px, 47vh);
+  .tiltFrame, .sparkBuild {
+    width: min(67vw, 325px, 50dvh);
     min-width: 0;
+  }
+
+  .tiltFrame.inspectable {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .actionColumn {
@@ -4035,7 +4064,7 @@
 .flagCard3d {
   position: relative;
 
-  width: min(76vw, 720px);
+  width: min(90vw, 900px, 100%);
 
   aspect-ratio: 1.5 / 1;
 
@@ -4281,8 +4310,9 @@
     gap: 12px;
   }
 
-  .movieStage .moviePoster {
-    width: min(62vw, 300px, 38dvh);
+  .movieStage .moviePoster,
+  .movieStage .sparkBuild {
+    width: min(67vw, 325px, 40dvh);
     flex-shrink: 0;
   }
 
