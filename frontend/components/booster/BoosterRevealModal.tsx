@@ -637,6 +637,7 @@ const cssVars = {
               <RarityImpact
                 key={`${cardId(current, index)}-rarity-impact`}
                 profile={profile}
+                violetRings={current.game === "movies" && profile.rank >= 70 && profile.rank < 92}
               />
             ) : null}
             
@@ -1435,13 +1436,26 @@ function SparkBuildTeaser({
 }
 function RarityImpact({
   profile,
+  violetRings = false,
 }: {
   profile: RevealProfile;
+  violetRings?: boolean;
 }) {
   const level = profile.impactLevel;
 
   if (level === 0) {
     return null;
+  }
+
+  if (violetRings) {
+    return (
+      <div className={`${styles.impactLayer} ${styles.violetRingImpact}`} aria-hidden="true">
+        {[0, 220, 440].map((delay) => (
+          <span key={delay} className={`${styles.impactRing} ${styles.impactRing1}`}
+            style={{ animationDelay: `${delay}ms` }} />
+        ))}
+      </div>
+    );
   }
 
   const sparkCount =

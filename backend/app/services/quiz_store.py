@@ -21,6 +21,9 @@ QUIZ_DATA_PATH = (
     / "lol_quiz_questions_unique_341.json"
 )
 
+CINEMA_DATA_PATH = QUIZ_DATA_PATH.with_name("cinema_quiz.json")
+REWARDS_BY_DIFFICULTY = {"easy": 20, "medium": 30, "hard": 50}
+
 DAILY_REWARD_LIMIT = 500
 
 # Ces mots apportent peu de sens lorsqu'on compare une réponse libre.
@@ -56,6 +59,20 @@ def load_quiz_questions() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         if not question_id:
             continue
         by_id[question_id] = question
+
+    for question in by_id.values():
+        question["theme"] = "lol"
+        question["reward_coins"] = REWARDS_BY_DIFFICULTY[question["difficulty"]]
+
+    cinema_payload = json.loads(CINEMA_DATA_PATH.read_text(encoding="utf-8"))
+    for raw_question in cinema_payload["questions"]:
+        question = dict(raw_question)
+        question["theme"] = "cinema"
+        question["reward_coins"] = REWARDS_BY_DIFFICULTY[question["difficulty"]]
+        question["fact_key"] = "cinema:" + question.get("fact_key", question["id"])
+        if question["id"] in by_id:
+            raise RuntimeError("Identifiant de question dupliqu?.")
+        by_id[question["id"]] = question
 
     return payload.get("meta", {}), by_id
 
@@ -285,6 +302,23 @@ def _answer_is_correct(question: dict[str, Any], answer: str) -> bool:
     return False
 
 
+def _answer_reward(question: dict[str, Any], answer: str) -> tuple[bool, int, bool]:
+    reward = REWARDS_BY_DIFFICULTY[question["difficulty"]]
+    if question.get("theme") == "cinema" and question.get("domain") == "release_year":
+        # Numeric answers bypass fuzzy text matching, which can confuse nearby years.
+        years = re.findall(r"(?<!\w)\d{4}(?!\w)", answer)
+        if len(years) != 1:
+            return False, 0, False
+        difference = abs(int(years[0]) - int(question["answer"]))
+        if difference == 0:
+            return True, reward, False
+        if difference <= 2:
+            return True, reward // 2, True
+        return False, 0, False
+    correct = _answer_is_correct(question, answer)
+    return correct, reward if correct else 0, False
+
+
 def _answered_question_ids(user_id: str) -> set[str]:
     response = (
         get_supabase_admin()
@@ -306,12 +340,15 @@ def get_random_question(
     user_id: str,
     difficulty: str | None = None,
     category: str | None = None,
+    theme: str = "lol",
 ) -> dict[str, Any]:
     _, by_id = load_quiz_questions()
     answered = _answered_question_ids(user_id)
 
     candidates = []
     for question in by_id.values():
+        if question["theme"] != theme:
+            continue
         if difficulty and question.get("difficulty") != difficulty:
             continue
         if category and question.get("category") != category:
@@ -327,7 +364,8 @@ def get_random_question(
         exhausted = True
         candidates = [
             q for q in by_id.values()
-            if (not difficulty or q.get("difficulty") == difficulty)
+            if q["theme"] == theme
+            and (not difficulty or q.get("difficulty") == difficulty)
             and (not category or q.get("category") == category)
         ]
 
@@ -345,6 +383,7 @@ def get_random_question(
         "reward_coins": int(question["reward_coins"]),
         "category": question["category"],
         "pool_exhausted": exhausted,
+        "year_tolerance": 2 if question.get("domain") == "release_year" else None,
     }
 
 
@@ -360,8 +399,7 @@ def submit_answer(
     if not question:
         raise HTTPException(status_code=404, detail="Question introuvable.")
 
-    correct = _answer_is_correct(question, answer)
-    reward = int(question["reward_coins"]) if correct else 0
+    correct, reward, partial_credit = _answer_reward(question, answer)
 
     try:
         response = (
@@ -397,6 +435,7 @@ def submit_answer(
 
     return {
         "correct": correct,
+        "partial_credit": partial_credit,
         "correct_answer": question["answer"],
         "reward_coins": int(data.get("reward_coins", 0)),
         "balance": int(data.get("balance", 0)),

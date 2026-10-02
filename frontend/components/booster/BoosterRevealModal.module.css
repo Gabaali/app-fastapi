@@ -1744,6 +1744,11 @@
   animation: waterRipple 950ms cubic-bezier(.15,.7,.25,1) both;
 }
 
+.violetRingImpact {
+  --primary: #a878ee;
+  --accent: #dec4ff;
+}
+
 .impactRing2 {
   animation: waterRipple 1100ms cubic-bezier(.15,.7,.25,1) 90ms both;
 }

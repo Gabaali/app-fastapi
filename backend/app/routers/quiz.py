@@ -30,14 +30,16 @@ def question(
         Query(),
     ] = None,
     category: Annotated[
-        Literal["champions", "monde"] | None,
+        Literal["champions", "monde", "films"] | None,
         Query(),
     ] = None,
+    theme: Annotated[Literal["lol", "cinema"], Query()] = "lol",
 ):
     return get_random_question(
         user_id=user_id,
         difficulty=difficulty,
         category=category,
+        theme=theme,
     )
 
 
