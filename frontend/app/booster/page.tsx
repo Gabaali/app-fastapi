@@ -702,6 +702,8 @@ useEffect(() => {
           <div
             className="topbarRight"
           >
+            <button type="button" className="ghostButton" onClick={() => router.push("/labyrinthe")}>Labyrinthe</button>
+
             <div
               className="wallet"
             >
