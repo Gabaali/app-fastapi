@@ -48,18 +48,31 @@ def get_cartedex_set(
         )
 
     try:
-        response = (
-            get_supabase_admin()
-            .table("user_collection")
-            .select(
-                "card_key,quantity,"
-                "first_obtained_at,last_obtained_at"
+        client = get_supabase_admin()
+        owned_rows = []
+        offset = 0
+        page_size = 1000
+
+        # Supabase caps each response: read every page in a stable order.
+        while True:
+            response = (
+                client.table("user_collection")
+                .select(
+                    "card_key,quantity,"
+                    "first_obtained_at,last_obtained_at"
+                )
+                .eq("user_id", user_id)
+                .eq("game", game)
+                .eq("product_set", set_code)
+                .order("card_key")
+                .range(offset, offset + page_size - 1)
+                .execute()
             )
-            .eq("user_id", user_id)
-            .eq("game", game)
-            .eq("product_set", set_code)
-            .execute()
-        )
+            page = response.data or []
+            if not page:
+                break
+            owned_rows.extend(page)
+            offset += len(page)
     except Exception as exc:
         raise HTTPException(
             status_code=500,
@@ -68,7 +81,7 @@ def get_cartedex_set(
 
     owned_by_key = {
         str(row["card_key"]): row
-        for row in (response.data or [])
+        for row in owned_rows
         if row.get("card_key")
     }
 
